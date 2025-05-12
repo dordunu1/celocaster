@@ -1,4 +1,7 @@
-import { useMiniAppContext } from "@/hooks/use-miniapp-context";
+'use client';
+
+import React from 'react';
+import { useMiniAppContext } from "../../hooks/use-miniapp-context";
 import { parseEther } from "viem";
 import { monadTestnet } from "viem/chains";
 import {

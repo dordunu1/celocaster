@@ -1,0 +1,8 @@
+{
+  "btcUsdFeed": "0x2Cd9D7E85494F68F5aF08EF96d6FD5e8F71B4d31",
+  "ethUsdFeed": "0x0c76859E85727683Eeba0C70Bc2e0F5781337818",
+  "betcaster": "0x8AEA4985c1739d21968659bE091A2c7be6eA48a7",
+  "betcasterAutomation": "0x3d7C3881d0b770EA51de433AD8737Ab59965A4BE",
+  "chainId": "10143",
+  "network": "monad-testnet"
+}

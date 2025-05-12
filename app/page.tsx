@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import App from "@/components/pages/app";
 import { APP_URL } from "@/lib/constants";
+import BetCaster from '../components/Betcaster';
 
 const frame = {
   version: "next",
@@ -31,5 +32,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function Home() {
-  return <App />;
+  return <BetCaster />;
 }

@@ -1,5 +1,8 @@
-import { useMiniAppContext } from "@/hooks/use-miniapp-context";
-import { APP_URL } from "@/lib/constants";
+'use client';
+
+import React from 'react';
+import { useMiniAppContext } from "../../hooks/use-miniapp-context";
+import { APP_URL } from "../../lib/constants";
 
 export function FarcasterActions() {
   const { actions } = useMiniAppContext();

@@ -1,8 +1,9 @@
 "use client";
 
-import { FarcasterActions } from "@/components/Home/FarcasterActions";
-import { User } from "@/components/Home/User";
-import { WalletActions } from "@/components/Home/WalletActions";
+import React from 'react';
+import { FarcasterActions } from "./FarcasterActions";
+import { User } from "./User";
+import { WalletActions } from "./WalletActions";
 
 export default function Home() {
   return (
