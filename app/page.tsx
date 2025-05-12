@@ -3,6 +3,9 @@ import App from "@/components/pages/app";
 import { APP_URL } from "@/lib/constants";
 import BetCaster from '../components/Betcaster';
 
+// Contract address from deployments.json
+const BETCASTER_ADDRESS = '0x8AEA4985c1739d21968659bE091A2c7be6eA48a7' as `0x${string}`;
+
 const frame = {
   version: "next",
   imageUrl: `${APP_URL}/images/feed.png`,
@@ -32,5 +35,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function Home() {
-  return <BetCaster />;
+  return <BetCaster betcasterAddress={BETCASTER_ADDRESS} />;
 }

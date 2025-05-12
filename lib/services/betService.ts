@@ -9,7 +9,8 @@ import {
   where, 
   orderBy, 
   increment,
-  writeBatch
+  writeBatch,
+  setDoc
 } from 'firebase/firestore';
 import { Bet, Comment, VoteType } from '../types/bet';
 
@@ -19,8 +20,9 @@ const VOTES_COLLECTION = 'votes';
 
 export const betService = {
   // Create a new bet
-  async createBet(bet: Omit<Bet, 'id' | 'comments' | 'yay' | 'nay' | 'userVote' | 'commentCount'>): Promise<string> {
-    const docRef = await addDoc(collection(db, BETS_COLLECTION), {
+  async createBet(bet: Omit<Bet, 'id' | 'comments' | 'yay' | 'nay' | 'userVote' | 'commentCount'> & { id: string }): Promise<string> {
+    const betId = bet.id;
+    await setDoc(doc(db, BETS_COLLECTION, betId), {
       ...bet,
       yay: 0,
       nay: 0,
@@ -28,7 +30,7 @@ export const betService = {
       timestamp: Date.now(),
       status: 'ACTIVE',
     });
-    return docRef.id;
+    return betId;
   },
 
   // Get all bets
@@ -48,7 +50,7 @@ export const betService = {
           where('userId', '==', userId)
         );
         const voteSnapshot = await getDocs(voteQuery);
-        bet.userVote = voteSnapshot.empty ? null : (voteSnapshot.docs[0].data().voteType as VoteType);
+        bet.userVote = voteSnapshot.empty ? undefined : (voteSnapshot.docs[0].data().voteType as VoteType);
       }
 
       // Get comments for this bet
@@ -66,7 +68,7 @@ export const betService = {
   },
 
   // Add a comment to a bet
-  async addComment(comment: Omit<Comment, 'id' | 'timestamp'>): Promise<string> {
+  async addComment(comment: Omit<Comment, 'id' | 'timestamp'> & { betId: string }): Promise<string> {
     const batch = writeBatch(db);
     
     // Create comment

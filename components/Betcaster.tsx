@@ -11,11 +11,38 @@ import TickerItem from './TickerItem';
 import { Category, Bet, Comment, VoteType } from '../lib/types/bet';
 import { useAssetPrice } from '../hooks/useAssetPrice';
 import Image from 'next/image';
-import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useSwitchChain, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { farcasterFrame } from '@farcaster/frame-wagmi-connector';
 import { monadTestnet } from 'wagmi/chains';
 import dynamic from 'next/dynamic';
 import BetPriceTracker from './BetPriceTracker';
+import { parseEther } from 'viem';
+import BetVoting from './BetVoting';
+
+// Import ABI directly
+const betcasterABI = [
+  {
+    "inputs": [
+      { "name": "betId", "type": "string" },
+      { "name": "voteStake", "type": "uint256" },
+      { "name": "duration", "type": "uint256" },
+      { "name": "isVerified", "type": "bool" },
+      { "name": "asset", "type": "string" },
+      { "name": "priceThreshold", "type": "uint256" },
+      { "name": "isPump", "type": "bool" }
+    ],
+    "name": "createBet",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  }
+] as const;
+
+// Add contract address from app/page.tsx
+const BETCASTER_ADDRESS = '0x8AEA4985c1739d21968659bE091A2c7be6eA48a7' as `0x${string}`;
+
+// Add contract constants
+const MIN_VOTE_STAKE = 0.1; // 0.1 MON
 
 interface TickerItem {
   symbol: string;
@@ -293,10 +320,12 @@ PredictionSection.displayName = 'PredictionSection';
 interface BetInfoProps {
   bet: Bet;
   darkMode: boolean;
+  betcasterAddress: `0x${string}`;
+  onVoteSuccess: () => void;
 }
 
 // Update the BetInfo component
-const BetInfo = ({ bet, darkMode }: BetInfoProps) => {
+const BetInfo = ({ bet, darkMode, betcasterAddress, onVoteSuccess }: BetInfoProps) => {
   // Type guard function to check if bet has all required properties for PredictionSection
   const isVerifiedBetWithPrice = (bet: Bet): bet is Bet & {
     asset: string;
@@ -405,46 +434,130 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
     5000 // Update every 5 seconds
   );
 
-  // Load bets and set up real-time listeners
+  // Add contract write hook with proper error handling
+  const { writeContract, data: createBetData, isError: isWriteError, error: writeError } = useWriteContract();
+
+  // Add transaction receipt hook
+  const { isLoading: isTransactionPending, isSuccess: isTransactionSuccess } = useWaitForTransactionReceipt({
+    hash: createBetData,
+  });
+
+  // Watch for transaction success with error handling
+  useEffect(() => {
+    if (isTransactionSuccess) {
+      console.log('Transaction successful:', createBetData);
+      handleTransactionSuccess();
+    } else if (isWriteError) {
+      console.error('Write error:', writeError);
+      setIsCreatingBet(false);
+      alert('Failed to create bet: ' + (writeError instanceof Error ? writeError.message : 'Unknown error'));
+    }
+  }, [isTransactionSuccess, isWriteError, writeError]);
+
+  // Load bets function for manual refreshes
+  const loadBets = useCallback(async () => {
+    try {
+      setLoading(true);
+      const updatedBets = await betService.getBets(context?.user?.fid?.toString());
+      setBets(updatedBets);
+    } catch (err) {
+      console.error('Failed to load bets:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [context?.user?.fid]);
+
+  // Set up real-time listener
   useEffect(() => {
     const unsubscribers: (() => void)[] = [];
     
-    const loadBets = async () => {
-      try {
-        setLoading(true);
-        // Set up real-time listener for bets collection
-        const q = query(collection(db, 'bets'), orderBy('timestamp', 'desc'));
-        const betsUnsubscribe = onSnapshot(q, async (snapshot) => {
-          const updatedBets = await Promise.all(snapshot.docs.map(async (doc) => {
-            const bet = { id: doc.id, ...doc.data() } as Bet;
-            
-            // Get user's vote if userId provided
-            if (context?.user?.fid) {
-              const voteQuery = query(
-                collection(db, 'votes'),
-                where('betId', '==', bet.id),
-                where('userId', '==', context.user.fid.toString())
-              );
-              const voteSnapshot = await getDocs(voteQuery);
-              bet.userVote = voteSnapshot.empty ? undefined : (voteSnapshot.docs[0].data().voteType as VoteType);
-            }
-            
-            return bet;
-          }));
-          setBets(updatedBets);
-          setLoading(false);
-        });
-        
-        unsubscribers.push(betsUnsubscribe);
-      } catch (err) {
-        console.error('Failed to load bets:', err);
+    try {
+      // Set up real-time listener for bets collection
+      const q = query(collection(db, 'bets'), orderBy('timestamp', 'desc'));
+      const betsUnsubscribe = onSnapshot(q, async (snapshot) => {
+        const updatedBets = await Promise.all(snapshot.docs.map(async (doc) => {
+          const bet = { id: doc.id, ...doc.data() } as Bet;
+          
+          // Get user's vote if userId provided
+          if (context?.user?.fid) {
+            const voteQuery = query(
+              collection(db, 'votes'),
+              where('betId', '==', bet.id),
+              where('userId', '==', context.user.fid.toString())
+            );
+            const voteSnapshot = await getDocs(voteQuery);
+            bet.userVote = voteSnapshot.empty ? undefined : (voteSnapshot.docs[0].data().voteType as VoteType);
+          }
+          
+          return bet;
+        }));
+        setBets(updatedBets);
         setLoading(false);
-      }
-    };
+      });
+      
+      unsubscribers.push(betsUnsubscribe);
+    } catch (err) {
+      console.error('Failed to set up real-time listener:', err);
+      setLoading(false);
+    }
 
-    loadBets();
     return () => unsubscribers.forEach(unsub => unsub());
   }, [context?.user?.fid]);
+
+  // Add new state for pending betId
+  const [pendingBetId, setPendingBetId] = useState<string | null>(null);
+
+  // Load bets function for manual refreshes
+  const handleTransactionSuccess = async () => {
+    try {
+      const durationHours = parseInt(newBetDuration);
+      const baseBetData = {
+        author: context?.user?.username || 'anonymous',
+        category: newBetCategory as Category,
+        content: newBetContent.trim(),
+        stakeAmount: 2,
+        betAmount: newBetVoteAmount,
+        timeLeft: newBetDuration,
+        expiryTime: Date.now() + (durationHours * 60 * 60 * 1000),
+        timestamp: Date.now(),
+        status: 'ACTIVE' as const,
+        pfpUrl: context?.user?.pfpUrl,
+        betType: betType
+      };
+
+      if (!pendingBetId) {
+        throw new Error('No pending betId found');
+      }
+
+      // Add additional fields for verified bets
+      const newBet = betType === 'verified' && selectedAsset
+        ? {
+            ...baseBetData,
+            predictionType,
+            priceThreshold,
+            startPrice: price ? parseFloat(price.replace('$', '')) : 0,
+            currentPrice: price ? parseFloat(price.replace('$', '')) : 0,
+            asset: selectedAsset,
+            id: pendingBetId
+          }
+        : {
+            ...baseBetData,
+            id: pendingBetId
+          };
+      
+      await betService.createBet(newBet);
+      setIsCreateModalOpen(false);
+      setNewBetContent('');
+      setBetType('voting');
+      setPredictionType('pump');
+      setPriceThreshold(5);
+      setPendingBetId(null);
+    } catch (err) {
+      console.error('Failed to create bet in Firebase:', err);
+    } finally {
+      setIsCreatingBet(false);
+    }
+  };
 
   // Fetch market data
   useEffect(() => {
@@ -492,22 +605,6 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
     ? bets 
     : bets.filter(bet => bet.category.toLowerCase() === selectedCategory.toLowerCase());
 
-  // Update vote handling to use Firebase
-  const handleVote = async (betId: string, voteType: 'yay' | 'nay') => {
-    if (!context?.user?.fid) {
-      alert('Please log in to vote');
-      return;
-    }
-
-    try {
-      await betService.voteBet(betId, context.user.fid.toString(), voteType);
-      const updatedBets = await betService.getBets(context.user.fid.toString());
-      setBets(updatedBets);
-    } catch (err) {
-      console.error('Failed to vote:', err);
-        }
-  };
-  
   // Update comment handling to show loading state
   const handleAddComment = async (betId: string) => {
     if (!commentText.trim()) return;
@@ -547,44 +644,46 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
 
     if (!newBetContent.trim()) return;
     
+    if (!betcasterAddress) {
+      console.error('Contract address is undefined');
+      alert('Contract address is not configured');
+      return;
+    }
+
     setIsCreatingBet(true);
     try {
       const durationHours = parseInt(newBetDuration);
-      const baseBetData = {
-        author: context.user.username || 'anonymous',
-        category: newBetCategory as Category,
-        content: newBetContent.trim(),
-        stakeAmount: 2, // Fixed platform stake
-        betAmount: newBetVoteAmount, // Configurable amount for voting
-        timeLeft: newBetDuration,
-        expiryTime: Date.now() + (durationHours * 60 * 60 * 1000),
-        timestamp: Date.now(),
-        status: 'ACTIVE' as const,
-        pfpUrl: context.user.pfpUrl,
-        betType: betType
-      };
+      const durationSeconds = durationHours * 60 * 60;
+      const betId = `${context.user.fid}-${Date.now()}`; // Unique bet ID
+      setPendingBetId(betId);
 
-      // Add additional fields for verified bets
-      const newBet = betType === 'verified' && selectedAsset
-        ? {
-            ...baseBetData,
-            predictionType,
-            priceThreshold,
-            startPrice: price ? parseFloat(price.replace('$', '')) : 0,
-            currentPrice: price ? parseFloat(price.replace('$', '')) : 0,
-            asset: selectedAsset
-          }
-        : baseBetData;
-      
-      await betService.createBet(newBet);
-      setIsCreateModalOpen(false);
-      setNewBetContent('');
-      setBetType('voting');
-      setPredictionType('pump');
-      setPriceThreshold(5);
+      const params = {
+        address: betcasterAddress as `0x${string}`,
+        abi: betcasterABI,
+        functionName: 'createBet',
+        value: parseEther('2'), // 2 MON platform stake
+        args: [
+          betId,
+          parseEther(newBetVoteAmount.toString()), // voteStake
+          BigInt(durationSeconds), // duration in seconds
+          betType === 'verified', // isVerified
+          selectedAsset || '', // asset (empty string for non-verified bets)
+          BigInt(priceThreshold), // priceThreshold
+          predictionType === 'pump' // isPump
+        ]
+      } as const;
+
+      console.log('Creating bet on-chain with betId:', betId);
+      console.log('createBet contract args:', params.args);
+      console.log('createBet contract params:', params);
+
+      // Call contract function
+      const hash = await writeContract(params);
+      console.log('Transaction hash:', hash);
+
     } catch (err) {
       console.error('Failed to create bet:', err);
-    } finally {
+      alert('Failed to create bet: ' + (err instanceof Error ? err.message : 'Unknown error'));
       setIsCreatingBet(false);
     }
   };
@@ -596,7 +695,12 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
   const handleNewBetVoteAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
     if (!isNaN(value)) {
-      setNewBetVoteAmount(value);
+      if (value < MIN_VOTE_STAKE) {
+        alert(`Vote stake must be at least ${MIN_VOTE_STAKE} MON`);
+        setNewBetVoteAmount(MIN_VOTE_STAKE);
+      } else {
+        setNewBetVoteAmount(value);
+      }
     }
   };
 
@@ -822,45 +926,42 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
               {/* Vote Section */}
               <div className={`px-4 py-3 flex items-center justify-between border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} transition-colors duration-200`}>
                 <div className="flex items-center space-x-6">
-                  {/* Yay */}
-                  <button 
-                    className={`flex items-center space-x-2 ${
-                      bet.userVote === 'yay' 
-                        ? 'text-green-500' 
-                        : darkMode ? 'text-gray-400 hover:text-green-400' : 'text-gray-500 hover:text-green-600'
-                    } transition-colors duration-200`}
-                    onClick={() => handleVote(bet.id, 'yay')}
-                  >
-                    <ThumbsUp size={18} className="transform rotate-0" />
-                    <span className="font-medium">Yay ({bet.yay})</span>
-                  </button>
-                  
-                  {/* Nay */}
-                  <button 
-                    className={`flex items-center space-x-2 ${
-                      bet.userVote === 'nay' 
-                        ? 'text-red-500' 
-                        : darkMode ? 'text-gray-400 hover:text-red-400' : 'text-gray-500 hover:text-red-600'
-                    } transition-colors duration-200`}
-                    onClick={() => handleVote(bet.id, 'nay')}
-                  >
-                    <ThumbsDown size={18} className="transform rotate-0" />
-                    <span className="font-medium">Nay ({bet.nay})</span>
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <ThumbsUp size={18} className={`transform rotate-0 ${bet.userVote === 'yay' ? 'text-green-500' : darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                    <span className="font-medium">({bet.yay})</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <ThumbsDown size={18} className={`transform rotate-0 ${bet.userVote === 'nay' ? 'text-red-500' : darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                    <span className="font-medium">({bet.nay})</span>
+                  </div>
                 </div>
                 
-                {/* Comments button */}
-                <button 
-                  className={`flex items-center space-x-1 ${darkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-500 hover:text-purple-600'} transition-colors duration-200`}
+                <div className="flex items-center space-x-4">
+                  <BetVoting
+                    betId={bet.id}
+                    voteStake={bet.betAmount}
+                    betcasterAddress={betcasterAddress}
+                    onVoteSuccess={loadBets}
+                  />
+                  
+                  {/* Comments button */}
+                  <button 
+                    className={`flex items-center space-x-1 ${darkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-500 hover:text-purple-600'} transition-colors duration-200`}
                     onClick={() => togglePostExpand(bet.id)}
-                >
-                  <MessageSquare size={18} />
+                  >
+                    <MessageSquare size={18} />
                     <span className="text-sm">{bet.commentCount}</span>
-                </button>
+                  </button>
+                </div>
               </div>
               
               {/* Bet Info */}
-              <BetInfo bet={bet} darkMode={darkMode} />
+              <BetInfo 
+                bet={bet} 
+                darkMode={darkMode} 
+                betcasterAddress={BETCASTER_ADDRESS}
+                onVoteSuccess={loadBets}
+              />
               
               {/* Expanded Comments Section */}
                 {expandedPostId === bet.id && (
@@ -1027,21 +1128,21 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                   </p>
               </div>
               
-                {/* Vote Stake Amount */}
-              <div>
+                {/* Vote Stake Amount Input */}
+                <div>
                   <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 transition-colors duration-200`}>Vote Stake Amount (MON)</label>
-                <input
-                  type="number"
-                  className={`w-full px-3 py-2 border rounded-md ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-700'} transition-colors duration-200`}
-                  value={newBetVoteAmount}
-                  onChange={handleNewBetVoteAmountChange}
-                    min="0.1"
+                  <input
+                    type="number"
+                    className={`w-full px-3 py-2 border rounded-md ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-700'} transition-colors duration-200`}
+                    value={newBetVoteAmount}
+                    onChange={handleNewBetVoteAmountChange}
+                    min={MIN_VOTE_STAKE}
                     step="0.1"
-                />
+                  />
                   <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1 transition-colors duration-200`}>
-                    Amount each voter must stake to participate. Winners split the total pool.
+                    Amount each voter must stake to participate (minimum {MIN_VOTE_STAKE} MON). Winners split the total pool.
                   </p>
-              </div>
+                </div>
               
               {/* Duration */}
               <div>
@@ -1251,17 +1352,31 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
             <div className="p-6 border-t border-gray-200 dark:border-gray-700">
               <button
                 type="button"
-                disabled={isCreatingBet}
+                disabled={isCreatingBet || isTransactionPending}
                 className={`w-full ${
                   darkMode 
-                    ? isCreatingBet ? 'bg-purple-800' : 'bg-purple-700 hover:bg-purple-600' 
-                    : isCreatingBet ? 'bg-purple-700' : 'bg-purple-600 hover:bg-purple-700'
+                    ? (isCreatingBet || isTransactionPending) ? 'bg-purple-800' : 'bg-purple-700 hover:bg-purple-600' 
+                    : (isCreatingBet || isTransactionPending) ? 'bg-purple-700' : 'bg-purple-600 hover:bg-purple-700'
                 } text-white py-2 px-4 rounded-md font-medium transition-colors duration-200 disabled:opacity-50 flex items-center justify-center`}
                 onClick={handleCreateBet}
               >
                 {isCreatingBet ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                ) : 'Create Bet (2 MON stake)'}
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    <span>Waiting for wallet...</span>
+                  </div>
+                ) : isTransactionPending ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    <span>Confirming transaction...</span>
+                  </div>
+                ) : isWriteError ? (
+                  <div className="flex items-center space-x-2 text-red-300">
+                    <span>Failed - Click to retry</span>
+                  </div>
+                ) : (
+                  'Create Bet (2 MON stake)'
+                )}
               </button>
 
               {/* betCreated state is not used in the current implementation */}
