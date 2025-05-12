@@ -56,11 +56,15 @@ export const betService = {
       // Get comments for this bet
       const commentsQuery = query(
         collection(db, COMMENTS_COLLECTION),
-        where('betId', '==', bet.id),
+        where('betId', '==', String(bet.id)),
         orderBy('timestamp', 'desc')
       );
       const commentsSnapshot = await getDocs(commentsQuery);
-      bet.comments = commentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
+      bet.comments = commentsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }) as Comment);
+      if (!Array.isArray(bet.comments)) bet.comments = [];
       bets.push(bet);
     }
     

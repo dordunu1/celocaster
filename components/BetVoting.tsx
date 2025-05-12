@@ -16,9 +16,10 @@ interface BetVotingProps {
   voteStake: number; // This is the vote stake amount set by the bet creator
   betcasterAddress: `0x${string}`;
   onVoteSuccess?: () => void;
+  userVote?: 'yay' | 'nay';
 }
 
-export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSuccess }: BetVotingProps) {
+export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSuccess, userVote }: BetVotingProps) {
   const [isVoting, setIsVoting] = useState(false);
   const [lastVoteType, setLastVoteType] = useState<'yay' | 'nay' | null>(null);
   const [currentTxHash, setCurrentTxHash] = useState<`0x${string}` | undefined>(undefined);
@@ -162,16 +163,16 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
   return (
     <div className="flex gap-2">
       <button
-        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
+        className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-50${userVote ? ' opacity-50 cursor-not-allowed' : ''}`}
         onClick={() => handleVote(true)}
-        disabled={isVoting || isTransactionPending}
+        disabled={isVoting || isTransactionPending || !!userVote}
       >
         {isVoting && lastVoteType === 'yay' ? 'Waiting for wallet...' : isTransactionPending && lastVoteType === 'yay' ? 'Confirming...' : 'Yay'}
       </button>
       <button
-        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
+        className={`bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md disabled:opacity-50${userVote ? ' opacity-50 cursor-not-allowed' : ''}`}
         onClick={() => handleVote(false)}
-        disabled={isVoting || isTransactionPending}
+        disabled={isVoting || isTransactionPending || !!userVote}
       >
         {isVoting && lastVoteType === 'nay' ? 'Waiting for wallet...' : isTransactionPending && lastVoteType === 'nay' ? 'Confirming...' : 'Nay'}
       </button>

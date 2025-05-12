@@ -596,8 +596,36 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
     setDarkMode(prefersDark);
   }, []);
   
+  const [expandedComments, setExpandedComments] = useState<{ [betId: string]: any[] }>({});
+
+  // Fetch comments for a bet when expanded (real-time)
+  const listenToCommentsForBet = useCallback((betId: string) => {
+    const commentsQuery = query(
+      collection(db, 'comments'),
+      where('betId', '==', String(betId)),
+      orderBy('timestamp', 'desc')
+    );
+    const unsubscribe = onSnapshot(commentsQuery, (commentsSnapshot) => {
+      const comments = commentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setExpandedComments(prev => ({ ...prev, [betId]: comments }));
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (expandedPostId) {
+      const unsubscribe = listenToCommentsForBet(expandedPostId);
+      return () => unsubscribe();
+    }
+  }, [expandedPostId, listenToCommentsForBet]);
+
   const togglePostExpand = (postId: string) => {
-    setExpandedPostId(expandedPostId === postId ? null : postId);
+    if (expandedPostId === postId) {
+      setExpandedPostId(null);
+    } else {
+      setExpandedPostId(postId);
+      // No need to manually fetch, real-time listener will handle
+    }
   };
   
   // Filter bets by category
@@ -942,6 +970,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                     voteStake={bet.betAmount}
                     betcasterAddress={betcasterAddress}
                     onVoteSuccess={loadBets}
+                    userVote={bet.userVote}
                   />
                   
                   {/* Comments button */}
@@ -1002,32 +1031,28 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                   
                   {/* Display actual comments from bet.comments */}
                   <div className="space-y-3">
-                    {bet.comments && bet.comments.map((comment, index) => (
-                      <div key={comment.id || index} className="flex space-x-2">
-                        {comment.pfpUrl ? (
-                          <img 
-                            src={comment.pfpUrl} 
-                            alt={comment.author}
-                            className="h-8 w-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className={`h-8 w-8 rounded-full ${darkMode ? 'bg-purple-300 text-purple-900' : 'bg-purple-200 text-purple-700'} flex items-center justify-center font-bold transition-colors duration-200`}>
-                            {comment.author.charAt(0).toUpperCase()}
-                      </div>
-                        )}
-                      <div className={`flex-1 ${darkMode ? 'bg-gray-800' : 'bg-white'} p-2 rounded-lg shadow-sm transition-colors duration-200`}>
-                          <p className={`font-medium text-sm ${darkMode ? 'text-gray-100' : 'text-gray-800'} transition-colors duration-200`}>{comment.author}</p>
-                          <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-sm transition-colors duration-200`}>{comment.content}</p>
-                      </div>
-                    </div>
-                    ))}
-                    
-                    {bet.comments && bet.comments.length > 0 && (
-                    <div className="text-center">
-                      <button className={`text-sm ${darkMode ? 'text-purple-400 hover:text-purple-300' : 'text-purple-600 hover:text-purple-800'} transition-colors duration-200`}>
-                          View all {bet.commentCount} comments
-                      </button>
-                    </div>
+                    {(expandedComments[bet.id] && expandedComments[bet.id].length > 0) ? (
+                      expandedComments[bet.id].map((comment, index) => (
+                        <div key={comment.id || index} className="flex space-x-2">
+                          {comment.pfpUrl ? (
+                            <img 
+                              src={comment.pfpUrl} 
+                              alt={comment.author}
+                              className="h-8 w-8 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className={`h-8 w-8 rounded-full ${darkMode ? 'bg-purple-300 text-purple-900' : 'bg-purple-200 text-purple-700'} flex items-center justify-center font-bold transition-colors duration-200`}>
+                              {comment.author.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className={`flex-1 ${darkMode ? 'bg-gray-800' : 'bg-white'} p-2 rounded-lg shadow-sm transition-colors duration-200`}>
+                              <p className={`font-medium text-sm ${darkMode ? 'text-gray-100' : 'text-gray-800'} transition-colors duration-200`}>{comment.author}</p>
+                              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-sm transition-colors duration-200`}>{comment.content}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-gray-400 text-sm">No comments yet.</div>
                     )}
                   </div>
                 </div>
