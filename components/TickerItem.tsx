@@ -10,7 +10,7 @@ interface TickerItemProps {
   darkMode: boolean;
 }
 
-const logoMap = {
+const logoMap: Record<string, string> = {
   // Crypto - Top 10
   BTC: '/images/crypto/btc.svg',
   ETH: '/images/crypto/eth.svg',
@@ -21,11 +21,7 @@ const logoMap = {
   USDC: '/images/crypto/usdc.svg',
   ADA: '/images/crypto/ada.svg',
   AVAX: '/images/crypto/avax.svg',
-  DOGE: '/images/crypto/doge.svg',
-  // Stocks
-  AAPL: '/images/stocks/aapl.svg',
-  MSFT: '/images/stocks/msft.svg',
-  GOOGL: '/images/stocks/googl.svg'
+  DOGE: '/images/crypto/doge.svg'
 };
 
 export default function TickerItem({ symbol, price, darkMode }: TickerItemProps) {

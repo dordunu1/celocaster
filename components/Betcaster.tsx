@@ -57,7 +57,6 @@ interface CategoryOption {
 
 const mockCategories: CategoryOption[] = [
   { id: 1, name: 'Crypto', icon: <TrendingUp size={16} /> },
-  { id: 2, name: 'Stocks', icon: <Activity size={16} /> },
   { id: 3, name: 'General', icon: <Globe size={16} /> }
 ];
 
@@ -563,11 +562,8 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
   useEffect(() => {
     const fetchMarketData = async () => {
       try {
-        const [crypto, stocks] = await Promise.all([
-          marketService.getCryptoPrices(),
-          marketService.getStockPrices()
-        ]);
-        setTickerData([...crypto, ...stocks]);
+        const crypto = await marketService.getCryptoPrices();
+        setTickerData(crypto);
       } catch (err) {
         console.error('Failed to fetch market data:', err);
       }
@@ -922,7 +918,6 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                     <div className="flex items-center text-xs text-gray-500">
                       <span className={`px-2 py-0.5 ${darkMode ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700'} rounded-full flex items-center transition-colors duration-200`}>
                           {bet.category === 'Crypto' && <TrendingUp size={12} className="mr-1" />}
-                          {bet.category === 'Stocks' && <Activity size={12} className="mr-1" />}
                           {bet.category === 'General' && <Globe size={12} className="mr-1" />}
                           {bet.category}
                       </span>

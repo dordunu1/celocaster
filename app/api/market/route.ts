@@ -67,52 +67,9 @@ export async function GET() {
         ];
       }
 
-      // Fetch stock prices
-      const ALPHA_VANTAGE_KEY = process.env.NEXT_PUBLIC_MARKET_API_KEY;
-      const stockSymbols = ['AAPL', 'MSFT', 'GOOGL'];
-      
-      const stockPromises = stockSymbols.map(async (symbol) => {
-        try {
-          const response = await fetch(
-            `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_KEY}`,
-            {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-              },
-              cache: 'no-cache'
-            }
-          );
-
-          if (!response.ok) {
-            throw new Error(`Alpha Vantage API error: ${response.status}`);
-          }
-
-          const data = await response.json();
-          const quote = data['Global Quote'];
-          
-          return {
-            symbol,
-            price: quote ? parseFloat(quote['05. price']) || 0 : 0
-          } as TickerItem;
-        } catch (error) {
-          console.error(`Error fetching ${symbol}:`, error);
-          const defaultPrices = {
-            'AAPL': 187.38,
-            'MSFT': 423.56,
-            'GOOGL': 169.21
-          };
-          return { symbol, price: defaultPrices[symbol] || 0 } as TickerItem;
-        }
-      });
-
-      const stockPrices = await Promise.all(stockPromises);
-
-      // Return both crypto and stock prices
+      // Return only crypto prices
       return NextResponse.json({
-        crypto: cryptoPrices,
-        stocks: stockPrices
+        crypto: cryptoPrices
       });
 
     } catch (error) {
@@ -131,11 +88,6 @@ export async function GET() {
             { symbol: 'ADA', price: 0.48 },
             { symbol: 'AVAX', price: 35.25 },
             { symbol: 'DOGE', price: 0.12 }
-          ] as TickerItem[],
-          stocks: [
-            { symbol: 'AAPL', price: 187.38 },
-            { symbol: 'MSFT', price: 423.56 },
-            { symbol: 'GOOGL', price: 169.21 }
           ] as TickerItem[]
         });
       }
@@ -145,5 +97,5 @@ export async function GET() {
   }
 
   // This return is just to satisfy TypeScript
-  return NextResponse.json({ crypto: [], stocks: [] });
+  return NextResponse.json({ crypto: [] });
 } 

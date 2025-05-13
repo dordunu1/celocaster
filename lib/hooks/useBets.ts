@@ -36,11 +36,8 @@ export function useBets() {
 
   async function loadMarketData() {
     try {
-      const [crypto, stocks] = await Promise.all([
-        marketService.getCryptoPrices(),
-        marketService.getStockPrices()
-      ]);
-      setTickerData([...crypto, ...stocks]);
+      const crypto = await marketService.getCryptoPrices();
+      setTickerData(crypto);
     } catch (err) {
       console.error('Failed to load market data:', err);
     }

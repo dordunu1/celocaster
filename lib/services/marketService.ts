@@ -46,28 +46,5 @@ export const marketService = {
         { symbol: 'DOGE', price: 0.12 }
       ];
     }
-  },
-
-  // Fetch stock prices from our API route
-  async getStockPrices(): Promise<TickerItem[]> {
-    try {
-      const response = await fetch('/api/market');
-      
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.stocks || [];
-
-    } catch (error) {
-      console.error('Error fetching stock prices:', error);
-      // Return default values if API fails
-      return [
-        { symbol: 'AAPL', price: 187.38 },
-        { symbol: 'MSFT', price: 423.56 },
-        { symbol: 'GOOGL', price: 169.21 }
-      ];
-    }
   }
 }; 
