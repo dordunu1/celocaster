@@ -48,7 +48,8 @@ export function useBets() {
 
   async function createBet(bet: Omit<Bet, 'id' | 'comments' | 'yay' | 'nay' | 'userVote' | 'commentCount'>) {
     try {
-      await betService.createBet(bet);
+      const id = `${context?.user?.fid || 'anon'}-${Date.now()}`;
+      await betService.createBet({ ...bet, id });
       await loadBets();
     } catch (err) {
       setError('Failed to create bet');
