@@ -59,6 +59,11 @@ export default function BetPriceTracker({
     return () => clearInterval(interval);
   }, [lastUpdateTime, isLoading]);
 
+  // Toast handler for spinner click
+  const handleSpinnerClick = () => {
+    window.alert('Fetching new price every 15 seconds.');
+  };
+
   // Base container styles that maintain consistent height
   const containerClasses = "h-[5rem] min-w-[200px] flex flex-col justify-center transition-all duration-300 ease-in-out";
   const priceContainerClasses = "flex items-center justify-between w-full transition-all duration-300 ease-in-out";
@@ -68,7 +73,6 @@ export default function BetPriceTracker({
       <div className={containerClasses}>
         <div className={priceContainerClasses}>
           <span className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Loading price...</span>
-          <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
       </div>
     );
@@ -91,7 +95,7 @@ export default function BetPriceTracker({
   return (
     <div className={containerClasses + " !h-auto min-h-0 py-1"}>
       <div className="w-full">
-        {/* Spinner and info at top */}
+        {/* Info at top, no spinner */}
         <div className="flex items-center justify-between mb-1 min-h-[20px]">
           <div>
             {resolved ? (
@@ -110,29 +114,6 @@ export default function BetPriceTracker({
               )
             )}
           </div>
-          {/* Spinner for price update countdown */}
-          {!isLoading && (
-            <div className="relative w-5 h-5 ml-8 flex items-center justify-center">
-              <svg className="absolute top-0 left-0" width="20" height="20">
-                <circle
-                  cx="10" cy="10" r="9"
-                  fill="none"
-                  stroke={darkMode ? '#a78bfa' : '#7c3aed'}
-                  strokeWidth="2"
-                  strokeDasharray={2 * Math.PI * 9}
-                  strokeDashoffset={2 * Math.PI * 9 * (1 - spinnerPercent / 100)}
-                  style={{ transition: 'stroke-dashoffset 0.1s linear' }}
-                />
-              </svg>
-              <span className={`text-[10px] ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{Math.max(0, 15 - Math.floor((Date.now() - lastUpdateTime) / 1000))}s</span>
-            </div>
-          )}
-          {isLoading && (
-            <div className="flex items-center">
-              <div className={`w-3 h-3 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mr-2`}></div>
-              <span className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>Fetching new price...</span>
-            </div>
-          )}
         </div>
         {/* Asset header */}
         <div className="flex items-center mb-0.5">

@@ -712,7 +712,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
           BigInt(durationSeconds), // duration in seconds
           betType === 'verified', // isVerified
           selectedAsset || '', // asset (empty string for non-verified bets)
-          BigInt(priceThreshold), // priceThreshold
+          BigInt(Math.round(priceThreshold * 10)), // priceThreshold (tenths of a percent)
           predictionType === 'pump' // isPump
         ]
       } as const;
