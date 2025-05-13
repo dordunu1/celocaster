@@ -65,8 +65,8 @@ const SUPPORTED_ASSETS = [
   { symbol: 'ETH', name: 'Ethereum', icon: '/images/eth.svg' }
 ];
 
-function CountdownTimer({ expiryTime, darkMode }: { expiryTime: number, darkMode: boolean }) {
-  const [timeLeft, setTimeLeft] = useState<string>('');
+function CountdownTimer({ expiryTime, darkMode, status }: { expiryTime: number, darkMode: boolean, status?: string }) {
+  const [timeLeft, setTimeLeft] = useState<string>("");
   const [isExpired, setIsExpired] = useState(false);
 
   const calculateTimeLeft = useCallback(() => {
@@ -75,7 +75,7 @@ function CountdownTimer({ expiryTime, darkMode }: { expiryTime: number, darkMode
 
     if (diff <= 0) {
       setIsExpired(true);
-      return 'Expired';
+      return "Expired";
     }
 
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -106,7 +106,7 @@ function CountdownTimer({ expiryTime, darkMode }: { expiryTime: number, darkMode
     <div className={`flex items-center ${isExpired ? 'text-red-500' : darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
       <Clock size={12} className="mr-1" />
       <span className="text-xs">
-        {isExpired ? 'Resolving...' : timeLeft + ' left'}
+        {status === 'RESOLVED' ? 'Resolved' : isExpired ? 'Expired' : timeLeft + ' left'}
       </span>
     </div>
   );
@@ -297,9 +297,6 @@ interface PredictionSectionProps {
 const PredictionSection = React.memo(({ bet, darkMode }: PredictionSectionProps) => {
   return (
     <div className="flex items-center justify-between min-h-[48px] transition-all duration-300 ease-in-out">
-      <div className={`${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-        Prediction: {bet.predictionType === 'pump' ? 'Will pump' : 'Will dump'} by {bet.priceThreshold}%
-      </div>
       <div className="min-w-[200px] flex justify-end">
         <BetPriceTracker
           asset={bet.asset}
@@ -381,12 +378,15 @@ const BetInfo = ({ bet, darkMode, betcasterAddress, onVoteSuccess }: BetInfoProp
 };
 
 // Add a tooltip component for reusability
-const Tooltip = ({ content, children }: { content: string, children: React.ReactNode }) => {
+const Tooltip = ({ content, children, darkMode }: { content: string, children: React.ReactNode, darkMode: boolean }) => {
   return (
     <div className="relative group">
       {children}
-      <div className="absolute z-50 invisible group-hover:visible bg-black/90 text-white text-sm rounded-lg py-2 px-3 right-0 mt-2 min-w-[280px] max-w-[320px] shadow-xl">
-        <div className="absolute -top-2 right-3 w-4 h-4 bg-black/90 transform rotate-45"></div>
+      <div className={`absolute z-50 invisible group-hover:visible text-sm rounded-lg py-2 px-3 right-0 mt-2 min-w-[280px] max-w-[320px] shadow-xl
+        ${darkMode ? 'bg-black/90 text-white' : 'bg-white text-gray-900 border border-gray-200'}`}
+      >
+        <div className={`absolute -top-2 right-3 w-4 h-4 transform rotate-45
+          ${darkMode ? 'bg-black/90' : 'bg-white border-l border-t border-gray-200'}`}></div>
         {content}
       </div>
     </div>
@@ -808,6 +808,9 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
     setMounted(true);
   }, []);
 
+  // In the BetCaster component, add state to track how many comments to show per bet
+  const [commentsShown, setCommentsShown] = useState<{ [betId: string]: number }>({});
+
   return (
     <div className={`flex flex-col min-h-screen ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-800'} transition-colors duration-200`}>
       {/* Header */}
@@ -896,78 +899,82 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-700"></div>
           </div>
         ) : (
-        <div className="space-y-4">
+          <div className="space-y-4">
             {filteredBets.map(bet => (
-              <div key={bet.id} className={`${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white'} rounded-lg shadow-md overflow-hidden transition-colors duration-200`}>
-              {/* Post Header */}
-              <div className={`px-4 py-3 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border-b flex items-center justify-between transition-colors duration-200`}>
-                <div className="flex items-center space-x-2">
-                  {bet.pfpUrl ? (
-                    <img 
-                      src={bet.pfpUrl} 
-                      alt={bet.author}
-                      className="h-8 w-8 rounded-full object-cover"
-                    />
-                  ) : (
-                  <div className={`h-8 w-8 rounded-full ${darkMode ? 'bg-purple-300 text-purple-900' : 'bg-purple-200 text-purple-700'} flex items-center justify-center font-bold transition-colors duration-200`}>
-                      {bet.author.charAt(0).toUpperCase()}
-                  </div>
-                  )}
-                  <div>
-                    <p className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-800'} transition-colors duration-200`}>{bet.author}</p>
-                    <div className="flex items-center text-xs text-gray-500">
-                      <span className={`px-2 py-0.5 ${darkMode ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700'} rounded-full flex items-center transition-colors duration-200`}>
+              <div key={bet.id} className={`border-2 ${darkMode ? 'border-purple-900' : 'border-purple-700'} ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white'} rounded-lg shadow-md overflow-hidden transition-colors duration-200`}>
+                {/* Post Header */}
+                <div className={`px-4 py-3 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border-b flex items-center justify-between transition-colors duration-200`}>
+                  <div className="flex items-center space-x-2">
+                    {bet.pfpUrl ? (
+                      <img 
+                        src={bet.pfpUrl} 
+                        alt={bet.author}
+                        className="h-8 w-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className={`h-8 w-8 rounded-full ${darkMode ? 'bg-purple-300 text-purple-900' : 'bg-purple-200 text-purple-700'} flex items-center justify-center font-bold transition-colors duration-200`}>
+                        {bet.author.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-800'} transition-colors duration-200`}>{bet.author}</p>
+                      <div className="flex items-center text-xs text-gray-500">
+                        <span className={`px-2 py-0.5 ${darkMode ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700'} rounded-full flex items-center transition-colors duration-200`}>
                           {bet.category === 'Crypto' && <TrendingUp size={12} className="mr-1" />}
                           {bet.category === 'General' && <Globe size={12} className="mr-1" />}
                           {bet.category}
-                      </span>
-                      <div className="ml-2">
-                        <CountdownTimer expiryTime={bet.expiryTime} darkMode={darkMode} />
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className={`text-sm ${darkMode ? 'text-purple-300' : 'text-purple-700'} font-medium`}>
-                    {(bet.yay + bet.nay) * bet.betAmount} MON in pool
-                  </div>
-                  <Tooltip content={
-                    bet.betType === 'verified' 
-                      ? `This is a Chainlink-verified price prediction bet. To participate, stake ${bet.betAmount} MON on either Yay or Nay. If the price ${bet.predictionType === 'pump' ? 'increases' : 'decreases'} by ${bet.priceThreshold}% or more, Yay voters win. Otherwise, Nay voters win. Winners split the total pool proportionally to their stake.`
-                      : `This is a community-voted prediction. Stake ${bet.betAmount} MON to vote Yay or Nay. When the bet expires, the side with more votes wins and splits the total pool proportionally to their stake.`
-                  }>
-                    <Info size={16} className={`${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-600'} cursor-help transition-colors duration-200`} />
-                  </Tooltip>
-                </div>
-              </div>
-              
-              {/* Post Content */}
-              <div className="px-4 py-3">
-                  <p className={`${darkMode ? 'text-gray-100' : 'text-gray-800'} text-lg transition-colors duration-200`}>{bet.content}</p>
-              </div>
-              
-              {/* Vote Section */}
-              <div className={`px-4 py-3 flex items-center justify-between border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} transition-colors duration-200`}>
-                <div className="flex items-center space-x-6">
-                  <div className="flex items-center space-x-2">
-                    <ThumbsUp size={18} className={`transform rotate-0 ${bet.userVote === 'yay' ? 'text-green-500' : darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                    <span className="font-medium">({bet.yay})</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <ThumbsDown size={18} className={`transform rotate-0 ${bet.userVote === 'nay' ? 'text-red-500' : darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                    <span className="font-medium">({bet.nay})</span>
+                  <div className="flex items-center space-x-3">
+                    <div className="flex flex-col items-end min-w-[80px]">
+                      <div className={`text-xs ${darkMode ? 'text-purple-200' : 'text-purple-700'} font-medium`}>
+                        {((bet.yay + bet.nay) * bet.betAmount).toFixed(1)} MON in pool
+                      </div>
+                      {bet.status === "RESOLVED" && (
+                        <span className={`mt-1 px-2 py-0.5 rounded text-[10px] font-semibold ${darkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-700'}`}>RESOLVED</span>
+                      )}
+                      {bet.status !== "RESOLVED" && (
+                        <CountdownTimer expiryTime={bet.expiryTime} darkMode={darkMode} status={bet.status} />
+                      )}
+                    </div>
+                    <Tooltip content={
+                      bet.betType === 'verified' 
+                        ? `This is a Chainlink-verified price prediction bet. To participate, stake ${bet.betAmount} MON on either Yay or Nay. If the price ${bet.predictionType === 'pump' ? 'increases' : 'decreases'} by ${bet.priceThreshold}% or more, Yay voters win. Otherwise, Nay voters win. Winners split the total pool proportionally to their stake.`
+                        : `This is a community-voted prediction. Stake ${bet.betAmount} MON to vote Yay or Nay. When the bet expires, the side with more votes wins and splits the total pool proportionally to their stake.`
+                    } darkMode={darkMode}>
+                      <Info size={16} className={`${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-600'} cursor-help transition-colors duration-200`} />
+                    </Tooltip>
                   </div>
                 </div>
-                
-                <div className="flex items-center space-x-4">
-                  <BetVoting
-                    betId={bet.id}
-                    voteStake={bet.betAmount}
-                    betcasterAddress={betcasterAddress}
-                    onVoteSuccess={loadBets}
-                    userVote={bet.userVote}
-                  />
-                  
+                {/* Post Content */}
+                <div className="px-4 py-3 flex items-center">
+                  <p className={`${darkMode ? 'text-gray-100' : 'text-gray-800'} text-lg font-medium transition-colors duration-200 mr-2`}>{bet.content}</p>
+                  {bet.betType === 'verified' && bet.predictionType && typeof bet.priceThreshold === 'number' && (
+                    <span className={
+                      `ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ` +
+                      (bet.predictionType === 'pump'
+                        ? (darkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-700')
+                        : (darkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-700'))
+                    }>
+                      {bet.predictionType === 'pump' ? '+' : '-'}{bet.priceThreshold}%
+                    </span>
+                  )}
+                </div>
+                {/* Vote Section */}
+                <div className={`px-4 py-3 flex items-center justify-between border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} transition-colors duration-200`}>
+                  <div className="flex items-center space-x-4">
+                    <BetVoting
+                      betId={bet.id}
+                      voteStake={bet.betAmount}
+                      betcasterAddress={betcasterAddress}
+                      onVoteSuccess={loadBets}
+                      userVote={bet.userVote}
+                      yayCount={bet.yay}
+                      nayCount={bet.nay}
+                    />
+                  </div>
                   {/* Comments button */}
                   <button 
                     className={`flex items-center space-x-1 ${darkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-500 hover:text-purple-600'} transition-colors duration-200`}
@@ -977,84 +984,91 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                     <span className="text-sm">{bet.commentCount}</span>
                   </button>
                 </div>
-              </div>
-              
-              {/* Bet Info */}
-              <BetInfo 
-                bet={bet} 
-                darkMode={darkMode} 
-                betcasterAddress={BETCASTER_ADDRESS}
-                onVoteSuccess={loadBets}
-              />
-              
-              {/* Expanded Comments Section */}
+                {/* Bet Info */}
+                <BetInfo 
+                  bet={bet} 
+                  darkMode={darkMode} 
+                  betcasterAddress={BETCASTER_ADDRESS}
+                  onVoteSuccess={loadBets}
+                />
+                {/* Expanded Comments Section */}
                 {expandedPostId === bet.id && (
-                <div className={`px-4 py-3 border-t ${darkMode ? 'border-gray-700 bg-gray-700' : 'border-gray-200 bg-gray-50'} transition-colors duration-200`}>
-                  <div className="flex items-center space-x-2 mb-3">
-                    {context?.user?.pfpUrl ? (
-                      <img 
-                        src={context.user.pfpUrl} 
-                        alt={context.user.username || 'User'}
-                        className="h-8 w-8 rounded-full object-cover"
-                      />
-                    ) : (
-                    <div className={`h-8 w-8 rounded-full ${darkMode ? 'bg-gray-600' : 'bg-gray-300'} transition-colors duration-200`}></div>
-                    )}
-                    <div className="flex-1 flex">
-                      <input 
-                        type="text"
-                        value={commentText}
-                        onChange={(e) => setCommentText(e.target.value)}
-                        placeholder="Add a comment..."
-                        className={`flex-1 border ${darkMode ? 'bg-gray-800 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-700'} rounded-l-full px-4 py-2 text-sm focus:outline-none transition-colors duration-200`}
-                      />
-                      <button 
-                        onClick={() => handleAddComment(bet.id)}
-                        disabled={isPosting}
-                        className={`${
-                          darkMode 
-                            ? isPosting ? 'bg-purple-800' : 'bg-purple-700 hover:bg-purple-600' 
-                            : isPosting ? 'bg-purple-700' : 'bg-purple-600 hover:bg-purple-700'
-                        } text-white px-6 py-2 rounded-r-full text-sm transition-colors duration-200 disabled:opacity-50 min-w-[80px] flex items-center justify-center`}
-                      >
-                        {isPosting ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                        ) : 'Post'}
-                      </button>
+                  <div className={`px-4 py-3 border-t ${darkMode ? 'border-gray-700 bg-gray-700' : 'border-gray-200 bg-gray-50'} transition-colors duration-200`}>
+                    <div className="flex items-center space-x-2 mb-3">
+                      {context?.user?.pfpUrl ? (
+                        <img 
+                          src={context.user.pfpUrl} 
+                          alt={context.user.username || 'User'}
+                          className="h-8 w-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className={`h-8 w-8 rounded-full ${darkMode ? 'bg-gray-600' : 'bg-gray-300'} transition-colors duration-200`}></div>
+                      )}
+                      <div className="flex-1 flex">
+                        <input 
+                          type="text"
+                          value={commentText}
+                          onChange={(e) => setCommentText(e.target.value)}
+                          placeholder="Add a comment..."
+                          className={`flex-1 border ${darkMode ? 'bg-gray-800 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-700'} rounded-l-full px-4 py-2 text-sm focus:outline-none transition-colors duration-200`}
+                        />
+                        <button 
+                          onClick={() => handleAddComment(bet.id)}
+                          disabled={isPosting}
+                          className={`$${
+                            darkMode 
+                              ? isPosting ? 'bg-purple-800' : 'bg-purple-700 hover:bg-purple-600' 
+                              : isPosting ? 'bg-purple-700' : 'bg-purple-600 hover:bg-purple-700'
+                          } text-white px-6 py-2 rounded-r-full text-sm transition-colors duration-200 disabled:opacity-50 min-w-[80px] flex items-center justify-center`}
+                          style={{ backgroundColor: darkMode ? '#7c3aed' : '#6d28d9', color: '#fff', opacity: isPosting ? 0.5 : 1 }}
+                        >
+                          {isPosting ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                          ) : 'Post'}
+                        </button>
+                      </div>
+                    </div>
+                    {/* Display paginated comments in a scrollable container */}
+                    <div className="space-y-3 max-h-[260px] overflow-y-auto">
+                      {(expandedComments[bet.id] && expandedComments[bet.id].length > 0) ? (
+                        <>
+                          {expandedComments[bet.id].slice(0, commentsShown[bet.id] || 3).map((comment, index) => (
+                            <div key={comment.id || index} className="flex space-x-2">
+                              {comment.pfpUrl ? (
+                                <img 
+                                  src={comment.pfpUrl} 
+                                  alt={comment.author}
+                                  className="h-8 w-8 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className={`h-8 w-8 rounded-full ${darkMode ? 'bg-purple-300 text-purple-900' : 'bg-purple-200 text-purple-700'} flex items-center justify-center font-bold transition-colors duration-200`}>
+                                  {comment.author.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div className={`flex-1 ${darkMode ? 'bg-gray-800' : 'bg-white'} p-2 rounded-lg shadow-sm transition-colors duration-200`}>
+                                  <p className={`font-medium text-sm ${darkMode ? 'text-gray-100' : 'text-gray-800'} transition-colors duration-200`}>{comment.author}</p>
+                                  <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-sm transition-colors duration-200`}>{comment.content}</p>
+                              </div>
+                            </div>
+                          ))}
+                          {expandedComments[bet.id].length > (commentsShown[bet.id] || 3) && (
+                            <button
+                              className={`mt-2 px-4 py-1 rounded-full text-xs font-medium ${darkMode ? 'bg-purple-900 text-purple-200 hover:bg-purple-800' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'} transition-colors`}
+                              onClick={() => setCommentsShown(prev => ({ ...prev, [bet.id]: (prev[bet.id] || 3) + 3 }))}
+                            >
+                              Show more comments
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-gray-400 text-sm">No comments yet.</div>
+                      )}
                     </div>
                   </div>
-                  
-                  {/* Display actual comments from bet.comments */}
-                  <div className="space-y-3">
-                    {(expandedComments[bet.id] && expandedComments[bet.id].length > 0) ? (
-                      expandedComments[bet.id].map((comment, index) => (
-                        <div key={comment.id || index} className="flex space-x-2">
-                          {comment.pfpUrl ? (
-                            <img 
-                              src={comment.pfpUrl} 
-                              alt={comment.author}
-                              className="h-8 w-8 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className={`h-8 w-8 rounded-full ${darkMode ? 'bg-purple-300 text-purple-900' : 'bg-purple-200 text-purple-700'} flex items-center justify-center font-bold transition-colors duration-200`}>
-                              {comment.author.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <div className={`flex-1 ${darkMode ? 'bg-gray-800' : 'bg-white'} p-2 rounded-lg shadow-sm transition-colors duration-200`}>
-                              <p className={`font-medium text-sm ${darkMode ? 'text-gray-100' : 'text-gray-800'} transition-colors duration-200`}>{comment.author}</p>
-                              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-sm transition-colors duration-200`}>{comment.content}</p>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-gray-400 text-sm">No comments yet.</div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </main>
 
