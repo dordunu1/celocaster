@@ -19,9 +19,10 @@ interface BetVotingProps {
   userVote?: 'yay' | 'nay';
   yayCount?: number;
   nayCount?: number;
+  isResolved?: boolean;
 }
 
-export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSuccess, userVote, yayCount = 0, nayCount = 0 }: BetVotingProps) {
+export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSuccess, userVote, yayCount = 0, nayCount = 0, isResolved = false }: BetVotingProps) {
   const [isVoting, setIsVoting] = useState(false);
   const [lastVoteType, setLastVoteType] = useState<'yay' | 'nay' | null>(null);
   const [currentTxHash, setCurrentTxHash] = useState<`0x${string}` | undefined>(undefined);
@@ -165,16 +166,16 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
   return (
     <div className="flex gap-2">
       <button
-        className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-50${userVote ? ' opacity-50 cursor-not-allowed' : ''}`}
+        className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-50${userVote || isResolved ? ' opacity-50 cursor-not-allowed' : ''}`}
         onClick={() => handleVote(true)}
-        disabled={isVoting || isTransactionPending || !!userVote}
+        disabled={isVoting || isTransactionPending || !!userVote || isResolved}
       >
         {isVoting && lastVoteType === 'yay' ? 'Waiting for wallet...' : isTransactionPending && lastVoteType === 'yay' ? 'Confirming...' : `Yay (${yayCount})`}
       </button>
       <button
-        className={`bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md disabled:opacity-50${userVote ? ' opacity-50 cursor-not-allowed' : ''}`}
+        className={`bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md disabled:opacity-50${userVote || isResolved ? ' opacity-50 cursor-not-allowed' : ''}`}
         onClick={() => handleVote(false)}
-        disabled={isVoting || isTransactionPending || !!userVote}
+        disabled={isVoting || isTransactionPending || !!userVote || isResolved}
       >
         {isVoting && lastVoteType === 'nay' ? 'Waiting for wallet...' : isTransactionPending && lastVoteType === 'nay' ? 'Confirming...' : `Nay (${nayCount})`}
       </button>

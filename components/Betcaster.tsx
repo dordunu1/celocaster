@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Clock, Award, MessageSquare, ThumbsUp, ThumbsDown, ChevronUp, ChevronDown, Edit3, TrendingUp, Activity, Globe, X, Moon, Sun, Info } from 'lucide-react';
+import { Clock, Award, MessageSquare, ThumbsUp, ThumbsDown, ChevronUp, ChevronDown, Edit3, TrendingUp, Activity, Globe, X, Moon, Sun, Info, User } from 'lucide-react';
 import { useMiniAppContext } from '../hooks/use-miniapp-context';
 import { marketService } from '../lib/services/marketService';
 import { betService } from '../lib/services/betService';
@@ -122,13 +122,15 @@ const BottomNav = dynamic(() => Promise.resolve(({
   address, 
   chainId, 
   darkMode, 
-  handleWalletConnection 
+  handleWalletConnection, 
+  isPending
 }: { 
   isConnected: boolean;
   address?: string;
   chainId?: number;
   darkMode: boolean;
   handleWalletConnection: () => void;
+  isPending: boolean;
 }) => {
   const [mounted, setMounted] = useState(false);
 
@@ -143,7 +145,9 @@ const BottomNav = dynamic(() => Promise.resolve(({
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between py-2">
           {/* Feed */}
-          <button className={`flex flex-col items-center p-2 ${darkMode ? 'text-gray-300 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}>
+          <button className={`flex flex-col items-center p-2 ${
+            darkMode ? 'bg-purple-800 text-white' : 'bg-purple-700 text-white'
+          } rounded transition-colors`}>
             <Award className="h-6 w-6" />
             <span className="text-xs mt-1">Feed</span>
           </button>
@@ -163,6 +167,7 @@ const BottomNav = dynamic(() => Promise.resolve(({
           {/* Wallet Connection */}
           <button 
             onClick={handleWalletConnection}
+            disabled={isPending}
             className={`flex flex-col items-center p-2 relative ${
               isConnected
                 ? darkMode 
@@ -175,7 +180,10 @@ const BottomNav = dynamic(() => Promise.resolve(({
           >
             <div className="relative">
               <Globe className="h-6 w-6" />
-              {isConnected && (
+              {isPending && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-yellow-400 animate-pulse" />
+              )}
+              {isConnected && !isPending && (
                 <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${
                   chainId === monadTestnet.id
                     ? 'bg-green-500'
@@ -183,7 +191,11 @@ const BottomNav = dynamic(() => Promise.resolve(({
                 }`} />
               )}
             </div>
-            {isConnected ? (
+            {isPending ? (
+              <span className="text-xs mt-1">Connecting...</span>
+            ) : isConnected && chainId !== monadTestnet.id ? (
+              <span className="text-xs mt-1">Switch to Monad</span>
+            ) : isConnected ? (
               <div className="flex flex-col items-center">
                 <span className="text-xs mt-1 font-mono">
                   {address?.slice(0, 4)}...{address?.slice(-4)}
@@ -305,6 +317,7 @@ const PredictionSection = React.memo(({ bet, darkMode }: PredictionSectionProps)
           isPump={bet.predictionType === 'pump'}
           priceThreshold={bet.priceThreshold}
           darkMode={darkMode}
+          resolved={('status' in bet) ? bet.status === 'RESOLVED' : false}
         />
       </div>
     </div>
@@ -396,7 +409,7 @@ const Tooltip = ({ content, children, darkMode }: { content: string, children: R
 export default function BetCaster({ betcasterAddress }: BetcasterProps) {
   const { context, isEthProviderAvailable } = useMiniAppContext();
   const { isConnected, address, chainId } = useAccount();
-  const { connect } = useConnect();
+  const { connect, isPending } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
   const [bets, setBets] = useState<Bet[]>([]);
@@ -624,10 +637,17 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
     }
   };
   
-  // Filter bets by category
-  const filteredBets = selectedCategory === 'all' 
-    ? bets 
-    : bets.filter(bet => bet.category.toLowerCase() === selectedCategory.toLowerCase());
+  // Update selectedFilter state and filteredBets logic to handle all filters
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const filteredBets = bets.filter(bet => {
+    if (selectedFilter === 'all') return true;
+    if (selectedFilter === 'crypto') return bet.category.toLowerCase() === 'crypto';
+    if (selectedFilter === 'general') return bet.category.toLowerCase() === 'general';
+    if (selectedFilter === 'active') return bet.status !== 'RESOLVED';
+    if (selectedFilter === 'resolved') return bet.status === 'RESOLVED';
+    if (selectedFilter === 'community') return bet.betType === 'voting';
+    return true;
+  }).filter(bet => selectedCategory === 'all' || bet.category.toLowerCase() === selectedCategory.toLowerCase());
 
   // Update comment handling to show loading state
   const handleAddComment = async (betId: string) => {
@@ -728,69 +748,25 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
     }
   };
 
-  // Auto-connect to Monad
+  // Improved auto-connect and chain switch logic
   useEffect(() => {
-    if (!mounted || connectionAttempted) return;
-
-    const autoConnect = async () => {
-      if (isAutoConnecting) return;
-      
-      try {
-        setIsAutoConnecting(true);
-        setConnectionAttempted(true);
-        
-        // If not connected, connect first
-        if (!isConnected && isEthProviderAvailable) {
-          console.log('Attempting to connect wallet...');
-          await connect({ connector: farcasterFrame() });
-          // Wait a bit for connection to establish
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-
-        // Always try to switch to Monad if we're not on it
-        if (chainId !== monadTestnet.id) {
-          console.log('Switching to Monad...');
-          await switchChain({ chainId: monadTestnet.id });
-        }
-      } catch (err) {
-        console.error('Auto-connection error:', err);
-        // If auto-connection fails, show the manual switch modal
-        if (isConnected && chainId !== monadTestnet.id) {
-          setShowChainSwitchModal(true);
-        }
-      } finally {
-        setIsAutoConnecting(false);
-      }
-    };
-
-    autoConnect();
-  }, [mounted, isConnected, chainId, connect, switchChain, isEthProviderAvailable, isAutoConnecting, connectionAttempted]);
-
-  // Reset connection attempt when chain changes
-  useEffect(() => {
-    if (chainId === monadTestnet.id) {
-      setConnectionAttempted(false);
+    if (!mounted) return;
+    // If not connected, always try to connect
+    if (!isConnected && isEthProviderAvailable && !isPending) {
+      connect({ connector: farcasterFrame() });
     }
-  }, [chainId]);
+    // If connected but not on Monad, immediately switch
+    if (isConnected && chainId !== monadTestnet.id && !isPending) {
+      switchChain({ chainId: monadTestnet.id });
+    }
+  }, [mounted, isConnected, chainId, connect, switchChain, isEthProviderAvailable, isPending]);
 
   // Function to handle wallet connection
-  const handleWalletConnection = async () => {
-    try {
-      if (!isConnected) {
-        await connect({ connector: farcasterFrame() });
-        // Wait a bit for connection to establish
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      // Always try to switch to Monad
-      if (chainId !== monadTestnet.id) {
-        await switchChain({ chainId: monadTestnet.id });
-      }
-    } catch (err) {
-      console.error('Connection error:', err);
-      if (isConnected && chainId !== monadTestnet.id) {
-        setShowChainSwitchModal(true);
-      }
+  const handleWalletBtn = () => {
+    if (!isConnected && !isPending) {
+      connect({ connector: farcasterFrame() });
+    } else if (isConnected && chainId !== monadTestnet.id && !isPending) {
+      switchChain({ chainId: monadTestnet.id });
     }
   };
 
@@ -861,34 +837,45 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
         </div>
       </div>
 
-      {/* Category Filter */}
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center space-x-2 overflow-x-auto pb-2">
+      {/* Unified filter bar: All, Crypto, General, Active, Resolved, Community Vote */}
+      <div className="container mx-auto px-4 pt-4 pb-4">
+        <div className="flex items-center space-x-2 overflow-x-auto whitespace-nowrap">
           <button
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              selectedCategory === 'all' 
-                ? darkMode ? 'bg-purple-800 text-white' : 'bg-purple-700 text-white' 
-                : darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-            }`}
-            onClick={() => setSelectedCategory('all')}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${selectedFilter === 'all' ? (darkMode ? 'bg-purple-800 text-white' : 'bg-purple-700 text-white') : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')}`}
+            onClick={() => setSelectedFilter('all')}
           >
             All
           </button>
-          
-          {mockCategories.map(category => (
-            <button
-              key={category.id}
-              className={`px-4 py-2 rounded-full text-sm font-medium flex items-center transition-colors ${
-                selectedCategory === category.name.toLowerCase()
-                  ? darkMode ? 'bg-purple-800 text-white' : 'bg-purple-700 text-white' 
-                  : darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-              }`}
-              onClick={() => setSelectedCategory(category.name.toLowerCase())}
-            >
-              <span className="mr-1">{category.icon}</span>
-              {category.name}
-            </button>
-          ))}
+          <button
+            className={`px-4 py-2 rounded-full text-sm font-medium flex items-center transition-colors ${selectedFilter === 'crypto' ? (darkMode ? 'bg-purple-800 text-white' : 'bg-purple-700 text-white') : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')}`}
+            onClick={() => setSelectedFilter('crypto')}
+          >
+            <TrendingUp size={16} className="mr-1" /> Crypto
+          </button>
+          <button
+            className={`px-4 py-2 rounded-full text-sm font-medium flex items-center transition-colors ${selectedFilter === 'general' ? (darkMode ? 'bg-purple-800 text-white' : 'bg-purple-700 text-white') : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')}`}
+            onClick={() => setSelectedFilter('general')}
+          >
+            <Globe size={16} className="mr-1" /> General
+          </button>
+          <button
+            className={`px-4 py-2 rounded-full text-sm font-medium flex items-center transition-colors ${selectedFilter === 'active' ? (darkMode ? 'bg-purple-800 text-white' : 'bg-purple-700 text-white') : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')}`}
+            onClick={() => setSelectedFilter('active')}
+          >
+            <Clock size={16} className="mr-1" /> Active
+          </button>
+          <button
+            className={`px-4 py-2 rounded-full text-sm font-medium flex items-center transition-colors ${selectedFilter === 'resolved' ? (darkMode ? 'bg-purple-800 text-white' : 'bg-purple-700 text-white') : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')}`}
+            onClick={() => setSelectedFilter('resolved')}
+          >
+            <Award size={16} className="mr-1" /> Resolved
+          </button>
+          <button
+            className={`px-4 py-2 rounded-full text-sm font-medium flex items-center transition-colors ${selectedFilter === 'community' ? (darkMode ? 'bg-purple-800 text-white' : 'bg-purple-700 text-white') : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')}`}
+            onClick={() => setSelectedFilter('community')}
+          >
+            <User size={16} className="mr-1" /> Community Vote
+          </button>
         </div>
       </div>
 
@@ -973,6 +960,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                       userVote={bet.userVote}
                       yayCount={bet.yay}
                       nayCount={bet.nay}
+                      isResolved={bet.status === 'RESOLVED'}
                     />
                   </div>
                   {/* Comments button */}
@@ -1080,7 +1068,8 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
             address={address}
             chainId={chainId}
             darkMode={darkMode}
-            handleWalletConnection={handleWalletConnection}
+            handleWalletConnection={handleWalletBtn}
+            isPending={isPending}
           />
 
           {showChainSwitchModal && (
@@ -1186,12 +1175,14 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                   value={newBetDuration}
                   onChange={(e) => setNewBetDuration(e.target.value)}
                 >
-                  <option value="1h">1 hour</option>
-                  <option value="4h">4 hours</option>
-                  <option value="12h">12 hours</option>
-                  <option value="24h">24 hours</option>
-                  <option value="48h">48 hours</option>
-                  <option value="72h">72 hours</option>
+                  <option value="0.1667">10 minutes</option>
+                  <option value="0.5">30 minutes</option>
+                  <option value="1">1 hour</option>
+                  <option value="4">4 hours</option>
+                  <option value="12">12 hours</option>
+                  <option value="24">24 hours</option>
+                  <option value="48">48 hours</option>
+                  <option value="72">72 hours</option>
                 </select>
               </div>
               
@@ -1365,10 +1356,11 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                       <div className="flex items-center space-x-2">
                         <input
                           type="range"
-                          min="1"
-                          max="20"
+                          min="0.5"
+                          max="50"
+                          step="0.5"
                           value={priceThreshold}
-                          onChange={(e) => setPriceThreshold(parseInt(e.target.value))}
+                          onChange={(e) => setPriceThreshold(parseFloat(e.target.value))}
                           className="flex-1"
                         />
                         <span className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{priceThreshold}%</span>
