@@ -29,7 +29,7 @@ export default function BetPriceTracker({
   const [currentPrice, setCurrentPrice] = useState<number | undefined>(undefined);
   const [blink, setBlink] = useState('');
   const prevPrice = useRef<number | undefined>(undefined);
-  const { price: currentPriceStr, isLoading, error } = !resolved ? useAssetPrice(asset, 15000) : { price: undefined, isLoading: false, error: null };
+  const { price: currentPriceStr, isLoading, error } = useAssetPrice(resolved ? '' : asset, 15000);
   const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
   const [spinnerPercent, setSpinnerPercent] = useState<number>(0);
 

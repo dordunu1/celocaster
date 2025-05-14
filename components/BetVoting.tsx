@@ -81,7 +81,19 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
     };
 
     handleTransaction();
-  }, [isTransactionSuccess, currentTxHash, lastVoteType, betId, context?.user?.fid, onVoteSuccess, transactionError]);
+  }, [
+    isTransactionSuccess,
+    currentTxHash,
+    lastVoteType,
+    betId,
+    context?.user?.fid,
+    onVoteSuccess,
+    transactionError,
+    setIsVoting,
+    setLastVoteType,
+    setCurrentTxHash,
+    betService
+  ]);
 
   const handleVote = async (isYay: boolean) => {
     if (!context?.user?.fid) {

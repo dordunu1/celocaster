@@ -617,7 +617,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
     // Refresh every minute
     const interval = setInterval(fetchMarketData, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [marketService, setTickerData]);
   
   // Animate ticker
   useEffect(() => {
@@ -634,7 +634,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
     setDarkMode(prefersDark);
   }, []);
   
-  const [expandedComments, setExpandedComments] = useState<{ [betId: string]: any[] }>({});
+  const [expandedComments, setExpandedComments] = useState<{ [betId: string]: Comment[] }>({});
 
   // Fetch comments for a bet when expanded (real-time)
   const listenToCommentsForBet = useCallback((betId: string) => {
@@ -644,7 +644,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
       orderBy('timestamp', 'desc')
     );
     const unsubscribe = onSnapshot(commentsQuery, (commentsSnapshot) => {
-      const comments = commentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const comments = commentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Comment[];
       setExpandedComments(prev => ({ ...prev, [betId]: comments }));
     });
     return unsubscribe;

@@ -69,7 +69,7 @@ export function FrameProvider({ children }: FrameProviderProps) {
         console.log("SDK loaded");
       });
     }
-  }, [isSDKLoaded]);
+  }, [isSDKLoaded, setContext, setActions, setIsEthProviderAvailable, setError, setIsSDKLoaded]);
 
   return (
     <FrameProviderContext.Provider

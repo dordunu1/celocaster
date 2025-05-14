@@ -19,7 +19,7 @@ export function useBets() {
     // Refresh market data every minute
     const marketInterval = setInterval(loadMarketData, 60000);
     return () => clearInterval(marketInterval);
-  }, [context?.user?.fid]);
+  }, [context?.user?.fid, loadBets, loadMarketData]);
 
   async function loadBets() {
     try {
