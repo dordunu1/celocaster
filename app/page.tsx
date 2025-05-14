@@ -4,16 +4,16 @@ import { APP_URL } from "@/lib/constants";
 import BetCaster from '../components/Betcaster';
 
 // Contract address from deployments.json
-const BETCASTER_ADDRESS = '0x8AEA4985c1739d21968659bE091A2c7be6eA48a7' as `0x${string}`;
+const BETCASTER_ADDRESS = process.env.NEXT_PUBLIC_BETCASTER_ADDRESS as `0x${string}`;
 
 const frame = {
   version: "next",
   imageUrl: `${APP_URL}/images/feed.png`,
   button: {
-    title: "Launch Template",
+    title: "Bet Now!",
     action: {
       type: "launch_frame",
-      name: "Monad Farcaster MiniApp Template",
+      name: "BetCaster",
       url: APP_URL,
       splashImageUrl: `${APP_URL}/images/splash.png`,
       splashBackgroundColor: "#f7f7f7",
@@ -23,10 +23,10 @@ const frame = {
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: "Monad Farcaster MiniApp Template",
+    title: "BetCaster - Decentralized Prediction Markets on Monad",
     openGraph: {
-      title: "Monad Farcaster MiniApp Template",
-      description: "A template for building mini-apps on Farcaster and Monad",
+      title: "BetCaster - Decentralized Prediction Markets on Monad",
+      description: "Predict, bet, and win! Create and join decentralized prediction markets—price-based or community-voted—on Monad.",
     },
     other: {
       "fc:frame": JSON.stringify(frame),

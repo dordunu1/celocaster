@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAssetPrice } from '../hooks/useAssetPrice';
 
 interface BetPriceTrackerProps {
@@ -26,6 +26,8 @@ export default function BetPriceTracker({
   const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
   const [timeSinceUpdate, setTimeSinceUpdate] = useState<number>(0);
   const [spinnerPercent, setSpinnerPercent] = useState<number>(0);
+  const [blink, setBlink] = useState('');
+  const prevPrice = useRef<number | undefined>(undefined);
 
   // Memoize the price update calculation
   const updatePriceChange = useCallback((priceStr: string) => {
@@ -44,6 +46,16 @@ export default function BetPriceTracker({
       updatePriceChange(currentPriceStr);
       setLastUpdateTime(Date.now());
       setSpinnerPercent(0);
+      const currentPrice = parseFloat(currentPriceStr.replace('$', ''));
+      if (prevPrice.current !== undefined) {
+        if (currentPrice > prevPrice.current) {
+          setBlink('green');
+        } else if (currentPrice < prevPrice.current) {
+          setBlink('red');
+        }
+        setTimeout(() => setBlink(''), 500);
+      }
+      prevPrice.current = currentPrice;
     }
   }, [currentPriceStr, isLoading, error, updatePriceChange]);
 
@@ -128,7 +140,9 @@ export default function BetPriceTracker({
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Current Price:</span>
-            <span className={`font-mono font-medium text-right w-32 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{currentPriceStr || '-'}</span>
+            <span className={`font-mono font-medium text-right w-32 ${darkMode ? 'text-gray-200' : 'text-gray-800'} ${blink === 'green' ? 'animate-blink-green' : blink === 'red' ? 'animate-blink-red' : ''}`}>
+              {currentPriceStr || '-'}
+            </span>
           </div>
         </div>
         {/* Change */}

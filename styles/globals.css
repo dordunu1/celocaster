@@ -1,0 +1,14 @@
+@keyframes blink-green {
+  0% { background-color: #16a34a33; }
+  100% { background-color: transparent; }
+}
+@keyframes blink-red {
+  0% { background-color: #dc262633; }
+  100% { background-color: transparent; }
+}
+.animate-blink-green {
+  animation: blink-green 0.5s;
+}
+.animate-blink-red {
+  animation: blink-red 0.5s;
+} 

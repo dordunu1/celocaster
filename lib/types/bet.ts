@@ -26,6 +26,8 @@ export interface Bet {
   startPrice?: number;
   currentPrice?: number;
   asset?: string;
+  thresholdMet?: boolean; // Whether threshold was met at resolution
+  endPrice?: number;      // Price at resolution
 }
 
 export interface Comment {

@@ -303,6 +303,21 @@
               "internalType": "uint256",
               "name": "prizePool",
               "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "yayWon",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "endPrice",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "thresholdMet",
+              "type": "bool"
             }
           ],
           "internalType": "struct IBetcaster.BetInfo",

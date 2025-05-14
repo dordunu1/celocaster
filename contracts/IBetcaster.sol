@@ -25,6 +25,9 @@ interface IBetcaster {
         uint256 totalYayVotes;
         uint256 totalNayVotes;
         uint256 prizePool;
+        bool yayWon;
+        uint256 endPrice;      // Price at resolution
+        bool thresholdMet;     // Whether threshold was met at resolution
     }
 
     // Core functions

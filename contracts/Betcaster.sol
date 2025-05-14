@@ -8,13 +8,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Betcaster is IBetcaster, ReentrancyGuard, Ownable {
     // Constants
-    uint256 public constant PLATFORM_STAKE = 2 ether; // 2 MON
+    uint256 public constant PLATFORM_STAKE = 0.05 ether; // 0.05 MON for testing
     uint256 public constant MIN_VOTE_STAKE = 0.1 ether; // 0.1 MON
-    uint256 public constant MIN_DURATION = 1 hours;
-    uint256 public constant MAX_DURATION = 72 hours;
+    uint256 public constant MIN_DURATION = 5 minutes;
+    uint256 public constant MAX_DURATION = 30 days;
     
     // State variables
-    mapping(string => BetInfo) private bets;
+    mapping(string => IBetcaster.BetInfo) private bets;
     mapping(string => mapping(address => Vote)) private votes;
     mapping(string => address[]) private yayVoters;
     mapping(string => address[]) private nayVoters;
@@ -90,7 +90,7 @@ contract Betcaster is IBetcaster, ReentrancyGuard, Ownable {
         uint256 priceThreshold,
         bool isPump
     ) external payable override nonReentrant {
-        require(msg.value == PLATFORM_STAKE, "Must stake 2 MON");
+        require(msg.value == PLATFORM_STAKE, "Must stake 0.05 MON");
         require(voteStake >= MIN_VOTE_STAKE, "Vote stake too low");
         require(duration >= MIN_DURATION && duration <= MAX_DURATION, "Invalid duration");
         require(bets[betId].creator == address(0), "Bet already exists");
@@ -104,7 +104,7 @@ contract Betcaster is IBetcaster, ReentrancyGuard, Ownable {
             (, int256 price,,,) = feed.latestRoundData();
             require(price > 0, "Invalid price feed");
             
-            bets[betId] = BetInfo({
+            bets[betId] = IBetcaster.BetInfo({
                 creator: msg.sender,
                 platformStake: msg.value,
                 voteStake: voteStake,
@@ -117,10 +117,13 @@ contract Betcaster is IBetcaster, ReentrancyGuard, Ownable {
                 isResolved: false,
                 totalYayVotes: 0,
                 totalNayVotes: 0,
-                prizePool: 0
+                prizePool: 0,
+                yayWon: false,
+                endPrice: 0,
+                thresholdMet: false
             });
         } else {
-            bets[betId] = BetInfo({
+            bets[betId] = IBetcaster.BetInfo({
                 creator: msg.sender,
                 platformStake: msg.value,
                 voteStake: voteStake,
@@ -133,7 +136,10 @@ contract Betcaster is IBetcaster, ReentrancyGuard, Ownable {
                 isResolved: false,
                 totalYayVotes: 0,
                 totalNayVotes: 0,
-                prizePool: 0
+                prizePool: 0,
+                yayWon: false,
+                endPrice: 0,
+                thresholdMet: false
             });
         }
         
@@ -141,7 +147,7 @@ contract Betcaster is IBetcaster, ReentrancyGuard, Ownable {
     }
     
     function castVote(string memory betId, bool isYay) external payable override nonReentrant {
-        BetInfo storage bet = bets[betId];
+        IBetcaster.BetInfo storage bet = bets[betId];
         require(bet.creator != address(0), "Bet doesn't exist");
         require(!bet.isResolved, "Bet already resolved");
         require(block.timestamp < bet.expiryTime, "Bet expired");
@@ -168,7 +174,7 @@ contract Betcaster is IBetcaster, ReentrancyGuard, Ownable {
     }
     
     function resolveBet(string memory betId) external override nonReentrant {
-        BetInfo storage bet = bets[betId];
+        IBetcaster.BetInfo storage bet = bets[betId];
         require(bet.creator != address(0), "Bet doesn't exist");
         require(!bet.isResolved, "Already resolved");
         require(block.timestamp >= bet.expiryTime, "Not expired yet");
@@ -185,14 +191,15 @@ contract Betcaster is IBetcaster, ReentrancyGuard, Ownable {
             
             uint256 priceChange = calculatePriceChange(bet.startPrice, uint256(endPrice));
             bool thresholdMet = priceChange >= bet.priceThreshold;
+            bet.endPrice = uint256(endPrice);
+            bet.thresholdMet = thresholdMet;
             
             if (thresholdMet) {
                 bool isPriceUp = uint256(endPrice) > bet.startPrice;
                 yayWon = (bet.isPump && isPriceUp) || (!bet.isPump && !isPriceUp);
             } else {
-                // If threshold not met, refund everyone
-                refundAll(betId);
-                return;
+                // If threshold not met, Nay wins
+                yayWon = false;
             }
         } else {
             // For non-verified bets, majority wins
@@ -205,23 +212,23 @@ contract Betcaster is IBetcaster, ReentrancyGuard, Ownable {
             }
         }
         
+        bet.yayWon = yayWon;
         bet.isResolved = true;
         emit BetResolved(betId, yayWon, bet.prizePool);
     }
     
     function claimPrize(string memory betId) external override nonReentrant {
-        BetInfo storage bet = bets[betId];
+        IBetcaster.BetInfo storage bet = bets[betId];
         require(bet.isResolved, "Bet not resolved");
         
         Vote storage userVote = votes[betId][msg.sender];
         require(userVote.amount > 0, "No vote found");
         require(!userVote.claimed, "Already claimed");
         
-        bool yayWon = getWinningVote(betId);
-        require(userVote.isYay == yayWon, "Did not win");
+        require(userVote.isYay == bet.yayWon, "Did not win");
         
         userVote.claimed = true;
-        uint256 prize = calculatePrize(betId, yayWon);
+        uint256 prize = calculatePrize(betId, bet.yayWon);
         
         (bool sent, ) = payable(msg.sender).call{value: prize}("");
         require(sent, "Failed to send prize");
@@ -239,13 +246,13 @@ contract Betcaster is IBetcaster, ReentrancyGuard, Ownable {
     }
     
     function calculatePrize(string memory betId, bool yayWon) internal view returns (uint256) {
-        BetInfo storage bet = bets[betId];
+        IBetcaster.BetInfo storage bet = bets[betId];
         uint256 totalWinners = yayWon ? bet.totalYayVotes : bet.totalNayVotes;
         return bet.prizePool / totalWinners;
     }
     
     function refundAll(string memory betId) internal {
-        BetInfo storage bet = bets[betId];
+        IBetcaster.BetInfo storage bet = bets[betId];
         
         // Refund Yay voters
         for (uint i = 0; i < yayVoters[betId].length; i++) {
@@ -271,7 +278,7 @@ contract Betcaster is IBetcaster, ReentrancyGuard, Ownable {
     }
     
     // View functions
-    function getBetInfo(string memory betId) external view override returns (BetInfo memory) {
+    function getBetInfo(string memory betId) external view override returns (IBetcaster.BetInfo memory) {
         return bets[betId];
     }
     
@@ -281,7 +288,7 @@ contract Betcaster is IBetcaster, ReentrancyGuard, Ownable {
     }
     
     function getWinningVote(string memory betId) public view override returns (bool yayWon) {
-        BetInfo storage bet = bets[betId];
+        IBetcaster.BetInfo storage bet = bets[betId];
         require(bet.isResolved, "Bet not resolved");
         
         if (bet.isVerified) {
@@ -300,5 +307,18 @@ contract Betcaster is IBetcaster, ReentrancyGuard, Ownable {
         }
         
         return bet.totalYayVotes > bet.totalNayVotes;
+    }
+
+    function withdraw() external onlyOwner {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No funds to withdraw");
+        (bool sent, ) = payable(owner()).call{value: balance}("");
+        require(sent, "Withdraw failed");
+    }
+
+    // Public getter for user vote info (for frontend claim status)
+    function getUserVoteInfo(string memory betId, address user) public view returns (bool isYay, uint256 amount, bool claimed) {
+        Vote storage vote = votes[betId][user];
+        return (vote.isYay, vote.amount, vote.claimed);
     }
 } 

@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Clock, Award, MessageSquare, ThumbsUp, ThumbsDown, ChevronUp, ChevronDown, Edit3, TrendingUp, Activity, Globe, X, Moon, Sun, Info, User } from 'lucide-react';
+import { Clock, Award, MessageSquare, ThumbsUp, ThumbsDown, ChevronUp, ChevronDown, Edit3, TrendingUp, Activity, Globe, X, Moon, Sun, Info, User, Share2 } from 'lucide-react';
 import { useMiniAppContext } from '../hooks/use-miniapp-context';
+import sdk from '@farcaster/frame-sdk';
 import { marketService } from '../lib/services/marketService';
 import { betService } from '../lib/services/betService';
 import { db } from '../lib/firebase/config';
@@ -18,28 +19,11 @@ import dynamic from 'next/dynamic';
 import BetPriceTracker from './BetPriceTracker';
 import { parseEther } from 'viem';
 import BetVoting from './BetVoting';
-
-// Import ABI directly
-const betcasterABI = [
-  {
-    "inputs": [
-      { "name": "betId", "type": "string" },
-      { "name": "voteStake", "type": "uint256" },
-      { "name": "duration", "type": "uint256" },
-      { "name": "isVerified", "type": "bool" },
-      { "name": "asset", "type": "string" },
-      { "name": "priceThreshold", "type": "uint256" },
-      { "name": "isPump", "type": "bool" }
-    ],
-    "name": "createBet",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  }
-] as const;
+import betcasterArtifact from '../artifacts/contracts/Betcaster.sol/Betcaster.json';
+const betcasterABI = betcasterArtifact.abi;
 
 // Add contract address from app/page.tsx
-const BETCASTER_ADDRESS = '0x8AEA4985c1739d21968659bE091A2c7be6eA48a7' as `0x${string}`;
+const BETCASTER_ADDRESS = process.env.NEXT_PUBLIC_BETCASTER_ADDRESS as `0x${string}`;
 
 // Add contract constants
 const MIN_VOTE_STAKE = 0.1; // 0.1 MON
@@ -75,7 +59,7 @@ function CountdownTimer({ expiryTime, darkMode, status }: { expiryTime: number, 
 
     if (diff <= 0) {
       setIsExpired(true);
-      return "Expired";
+      return "Resolving";
     }
 
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -103,10 +87,10 @@ function CountdownTimer({ expiryTime, darkMode, status }: { expiryTime: number, 
   }, [calculateTimeLeft]);
 
   return (
-    <div className={`flex items-center ${isExpired ? 'text-red-500' : darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+    <div className={`flex items-center ${isExpired ? 'text-yellow-500' : darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
       <Clock size={12} className="mr-1" />
       <span className="text-xs">
-        {status === 'RESOLVED' ? 'Resolved' : isExpired ? 'Expired' : timeLeft + ' left'}
+        {status === 'RESOLVED' ? 'Resolved' : isExpired ? 'Resolving' : timeLeft + ' left'}
       </span>
     </div>
   );
@@ -407,7 +391,7 @@ const Tooltip = ({ content, children, darkMode }: { content: string, children: R
 };
 
 export default function BetCaster({ betcasterAddress }: BetcasterProps) {
-  const { context, isEthProviderAvailable } = useMiniAppContext();
+  const { context, actions, isEthProviderAvailable } = useMiniAppContext() as { context: any, actions: typeof sdk.actions | null, isEthProviderAvailable: boolean };
   const { isConnected, address, chainId } = useAccount();
   const { connect, isPending } = useConnect();
   const { disconnect } = useDisconnect();
@@ -430,7 +414,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
   // Form state for create bet modal
   const [newBetContent, setNewBetContent] = useState('');
   const [newBetCategory, setNewBetCategory] = useState('Crypto');
-  const [newBetDuration, setNewBetDuration] = useState('24h');
+  const [newBetDuration, setNewBetDuration] = useState('24');
   const [commentText, setCommentText] = useState('');
   const [newBetVoteAmount, setNewBetVoteAmount] = useState<number>(0.1);
   const [selectedAsset, setSelectedAsset] = useState('');
@@ -522,7 +506,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
   // Load bets function for manual refreshes
   const handleTransactionSuccess = async () => {
     try {
-      const durationHours = parseInt(newBetDuration);
+      const durationHours = parseFloat(newBetDuration);
       const baseBetData = {
         author: context?.user?.username || 'anonymous',
         category: newBetCategory as Category,
@@ -696,8 +680,8 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
 
     setIsCreatingBet(true);
     try {
-      const durationHours = parseInt(newBetDuration);
-      const durationSeconds = durationHours * 60 * 60;
+      const durationHours = parseFloat(newBetDuration);
+      const durationSeconds = Math.round(durationHours * 60 * 60);
       const betId = `${context.user.fid}-${Date.now()}`; // Unique bet ID
       setPendingBetId(betId);
 
@@ -705,7 +689,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
         address: betcasterAddress as `0x${string}`,
         abi: betcasterABI,
         functionName: 'createBet',
-        value: parseEther('2'), // 2 MON platform stake
+        value: parseEther('0.05'), // 0.05 MON platform stake
         args: [
           betId,
           parseEther(newBetVoteAmount.toString()), // voteStake
@@ -938,16 +922,38 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                 {/* Post Content */}
                 <div className="px-4 py-3 flex items-center">
                   <p className={`${darkMode ? 'text-gray-100' : 'text-gray-800'} text-lg font-medium transition-colors duration-200 mr-2`}>{bet.content}</p>
-                  {bet.betType === 'verified' && bet.predictionType && typeof bet.priceThreshold === 'number' && (
-                    <span className={
-                      `ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ` +
-                      (bet.predictionType === 'pump'
-                        ? (darkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-700')
-                        : (darkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-700'))
-                    }>
-                      {bet.predictionType === 'pump' ? '+' : '-'}{bet.priceThreshold}%
-                    </span>
-                  )}
+                  <div className="flex flex-col items-end ml-auto">
+                    {bet.betType === 'verified' && bet.predictionType && typeof bet.priceThreshold === 'number' && (
+                      <span className={
+                        `mb-1 px-2 py-0.5 rounded-full text-xs font-semibold ` +
+                        (bet.predictionType === 'pump'
+                          ? (darkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-700')
+                          : (darkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-700'))
+                      }>
+                        {bet.predictionType === 'pump' ? '+' : '-'}{bet.priceThreshold}%
+                      </span>
+                    )}
+                    {/* Share button below threshold badge */}
+                    <button
+                      onClick={async () => {
+                        const shareUrl = window.location.origin;
+                        const shareText = `🎲 Bet Prediction: ${bet.content}\nVote YAY or NAY on BetCaster!`;
+                        if (actions && actions.composeCast) {
+                          await actions.composeCast({
+                            text: shareText,
+                            embeds: [shareUrl]
+                          });
+                        } else {
+                          const url = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(shareUrl)}`;
+                          window.open(url, '_blank');
+                        }
+                      }}
+                      className={`mt-1 px-2 py-1 border rounded text-xs flex items-center ${darkMode ? 'border-blue-400 text-blue-200 hover:bg-blue-900/30' : 'border-blue-700 text-blue-700 hover:bg-blue-100'}`}
+                      title="Share this bet to Farcaster"
+                    >
+                      <Share2 className="w-4 h-4 mr-1" /> Share
+                    </button>
+                  </div>
                 </div>
                 {/* Vote Section */}
                 <div className={`px-4 py-3 flex items-center justify-between border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} transition-colors duration-200`}>
@@ -1144,7 +1150,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
               <div>
                   <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 transition-colors duration-200`}>Platform Stake</label>
                   <div className={`w-full px-3 py-2 border rounded-md ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-700'} transition-colors duration-200`}>
-                    2 MON (Fixed)
+                    0.05 MON (Fixed)
                   </div>
                   <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1 transition-colors duration-200`}>
                     Required platform stake to create a bet. This ensures quality predictions.
@@ -1175,6 +1181,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                   value={newBetDuration}
                   onChange={(e) => setNewBetDuration(e.target.value)}
                 >
+                  <option value="">Select duration...</option>
                   <option value="0.1667">10 minutes</option>
                   <option value="0.5">30 minutes</option>
                   <option value="1">1 hour</option>
@@ -1224,6 +1231,16 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                 {/* Show additional options for verified bets */}
                 {betType === 'verified' && (
                   <>
+                    {/* Info about how Yay/Nay wins for verified bets */}
+                    <div className={`mb-4 p-3 rounded-md ${darkMode ? 'bg-blue-900/40 text-blue-200 border border-blue-800' : 'bg-blue-50 text-blue-800 border border-blue-200'}`}> 
+                      <div className="font-semibold mb-1">How winners are determined:</div>
+                      <ul className="list-disc pl-5 text-sm">
+                        <li><b>Yay</b> wins if the price moves by at least the threshold in the predicted direction (pump/dump).</li>
+                        <li><b>Nay</b> wins if the threshold is <b>not</b> met (i.e., the price does not move enough).</li>
+                        <li>If the price moves in the wrong direction or not enough, <b>Nay</b> wins.</li>
+                        <li>There are no refunds for verified bets unless the market is invalid.</li>
+                      </ul>
+                    </div>
                     <div>
                       <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
                         Select Asset
@@ -1401,7 +1418,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                     <span>Failed - Click to retry</span>
                   </div>
                 ) : (
-                  'Create Bet (2 MON stake)'
+                  'Create Bet (0.05 MON stake)'
                 )}
               </button>
 

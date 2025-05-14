@@ -1,0 +1,28 @@
+{
+  "subtitle": "Decentralized Prediction Markets on Monad",
+  "description": "Bet on crypto price moves or community outcomes. Create, vote, and win with transparent, on-chain prediction markets—whether price-verified or community-driven—powered by Monad.",
+  "ogTitle": "BetCaster",
+  "ogDescription": "Predict, bet, and win! The easiest way to create and join decentralized prediction markets—price-based or community-voted—on Monad.",
+  "ogImageUrl": "https://betcaster.netlify.app/images/feed.png",
+  "tagline": "Predict. Bet. Win. Together.",
+  "heroImageUrl": "https://betcaster.netlify.app/images/feed.png",
+  "accountAssociation": {
+    "header": "REPLACE_WITH_YOUR_HEADER",
+    "payload": "REPLACE_WITH_YOUR_PAYLOAD",
+    "signature": "REPLACE_WITH_YOUR_SIGNATURE"
+  },
+  "frame": {
+    "version": "1",
+    "name": "BetCaster",
+    "iconUrl": "https://betcaster.netlify.app/images/icon.jpeg",
+    "homeUrl": "https://betcaster.netlify.app",
+    "imageUrl": "https://betcaster.netlify.app/images/feed.png",
+    "screenshotUrls": [],
+    "tags": ["monad", "farcaster", "miniapp", "betting", "prediction", "crypto", "community"],
+    "primaryCategory": "finance",
+    "buttonTitle": "Bet Now!",
+    "splashImageUrl": "https://betcaster.netlify.app/images/splash.jpeg",
+    "splashBackgroundColor": "#ffffff",
+    "webhookUrl": "https://betcaster.netlify.app/api/webhook"
+  }
+} 

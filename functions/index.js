@@ -31,7 +31,7 @@ const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
 
 exports.resolveBets = functions.pubsub
-  .schedule("every 5 minutes")
+  .schedule("every 1 minutes")
   .onRun(async (context) => {
     const now = Date.now();
     const betsRef = db.collection("bets");
@@ -39,6 +39,14 @@ exports.resolveBets = functions.pubsub
       .where("status", "==", "ACTIVE")
       .where("expiryTime", "<=", now)
       .get();
+
+    console.log("Now:", now);
+    console.log("Querying for bets with status 'ACTIVE' and expiryTime <=", now);
+    console.log("Found", snapshot.size, "bets");
+    snapshot.docs.forEach(doc => {
+      const bet = doc.data();
+      console.log(`Bet ${bet.id}: expiryTime=${bet.expiryTime}, status=${bet.status}`);
+    });
 
     if (snapshot.empty) {
       console.log("No bets to resolve.");
@@ -51,10 +59,19 @@ exports.resolveBets = functions.pubsub
       try {
         const tx = await contract.resolveBet(bet.id);
         await tx.wait();
-        await betsRef.doc(bet.id).update({status: "RESOLVED"});
+        // Fetch resolved bet info from contract
+        const betInfo = await contract.getBetInfo(bet.id);
+        // betInfo is a struct, destructure the relevant fields
+        const thresholdMet = betInfo.thresholdMet;
+        const endPrice = betInfo.endPrice;
+        await betsRef.doc(bet.id).update({
+          status: "RESOLVED",
+          thresholdMet,
+          endPrice: endPrice ? Number(ethers.utils.formatUnits(endPrice, 2)) : undefined // adjust decimals if needed
+        });
         resolved++;
       } catch (e) {
-        // Ignore already resolved or failed
+        console.error(`Failed to resolve bet ${bet.id}:`, e);
       }
     }
 

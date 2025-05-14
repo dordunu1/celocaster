@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "E:\\Bestcaster\\contracts\\Betcaster.sol": {
-      "lastModificationDate": 1747064877216,
-      "contentHash": "4f0138c8059e45284d9024bc53e38e2b",
+      "lastModificationDate": 1747204384436,
+      "contentHash": "81851c5b05ddf21e48efb22fad85ede5",
       "sourceName": "contracts/Betcaster.sol",
       "solcConfig": {
         "version": "0.8.19",
@@ -42,8 +42,8 @@
       ]
     },
     "E:\\Bestcaster\\contracts\\IBetcaster.sol": {
-      "lastModificationDate": 1747064877216,
-      "contentHash": "ab2dec94e3282526ff9ccfdeb3365bba",
+      "lastModificationDate": 1747200208647,
+      "contentHash": "fb056a9855021c098db1553112055d4a",
       "sourceName": "contracts/IBetcaster.sol",
       "solcConfig": {
         "version": "0.8.19",
@@ -147,7 +147,7 @@
       ]
     },
     "E:\\Bestcaster\\node_modules\\@openzeppelin\\contracts\\access\\Ownable.sol": {
-      "lastModificationDate": 1747067643400,
+      "lastModificationDate": 1747152605960,
       "contentHash": "5a20b2cad87ddb61c7a3a6af21289e28",
       "sourceName": "@openzeppelin/contracts/access/Ownable.sol",
       "solcConfig": {
@@ -184,8 +184,8 @@
       ]
     },
     "E:\\Bestcaster\\node_modules\\@openzeppelin\\contracts\\utils\\Context.sol": {
-      "lastModificationDate": 1747067643099,
-      "contentHash": "5f2c5c4b6af2dd4551027144797bc8be",
+      "lastModificationDate": 1747152605683,
+      "contentHash": "f07feb4a44b1a4872370da5aa70e8e46",
       "sourceName": "@openzeppelin/contracts/utils/Context.sol",
       "solcConfig": {
         "version": "0.8.19",
