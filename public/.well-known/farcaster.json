@@ -18,7 +18,7 @@
     "homeUrl": "https://betcaster.netlify.app",
     "imageUrl": "https://betcaster.netlify.app/images/feed.png",
     "screenshotUrls": [],
-    "tags": ["monad", "farcaster", "miniapp", "betting", "prediction", "crypto", "community"],
+    "tags": ["monad", "farcaster", "betting", "prediction", "crypto"],
     "primaryCategory": "finance",
     "buttonTitle": "Bet Now!",
     "splashImageUrl": "https://betcaster.netlify.app/images/splash.jpeg",
