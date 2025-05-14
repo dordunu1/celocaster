@@ -67,7 +67,7 @@ exports.resolveBets = functions.pubsub
         await betsRef.doc(bet.id).update({
           status: "RESOLVED",
           thresholdMet,
-          endPrice: endPrice ? Number(ethers.utils.formatUnits(endPrice, 2)) : undefined // adjust decimals if needed
+          endPrice: endPrice ? Number(ethers.utils.formatUnits(endPrice, 8)) : undefined // 8 decimals for Chainlink price feeds
         });
         resolved++;
       } catch (e) {

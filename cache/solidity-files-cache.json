@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "E:\\Bestcaster\\contracts\\Betcaster.sol": {
-      "lastModificationDate": 1747204384436,
-      "contentHash": "81851c5b05ddf21e48efb22fad85ede5",
+      "lastModificationDate": 1747218364591,
+      "contentHash": "0ed25f6634e30e4b219942c051ec76ef",
       "sourceName": "contracts/Betcaster.sol",
       "solcConfig": {
         "version": "0.8.19",

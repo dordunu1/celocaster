@@ -7,9 +7,9 @@
   "tagline": "Predict. Bet. Win. Together.",
   "heroImageUrl": "https://betcaster.netlify.app/images/feed.png",
   "accountAssociation": {
-    "header": "REPLACE_WITH_YOUR_HEADER",
-    "payload": "REPLACE_WITH_YOUR_PAYLOAD",
-    "signature": "REPLACE_WITH_YOUR_SIGNATURE"
+    "header": "eyJmaWQiOjI2NTAwOCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweGUwOGRkODY5MzU1ZDUyMjE0NDg5M2RiNkFkQ2Y2ZDU3NzdFZTQ2OTgifQ",
+    "payload": "eyJkb21haW4iOiJiZXRjYXN0ZXIubmV0bGlmeS5hcHAifQ",
+    "signature": "MHg4Y2M1M2I4MGUyYjQ5MjM1OGZlYTU0MDUyNGUxZDViMjVmNzkzNTYzNTdhMWNmZjYxZDM4MjQ5OWVmNDI4N2NiMGQ4YTg2MTNkYTZlYTM3YWY2MzFkZmU4NTUxMzNmMjFkNmJhYjc3MzQxYjg1NmNiYmYxNzIyMGNlOTc4NTkwMDFi"
   },
   "frame": {
     "version": "1",

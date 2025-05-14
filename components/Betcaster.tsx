@@ -12,7 +12,7 @@ import TickerItem from './TickerItem';
 import { Category, Bet, Comment, VoteType } from '../lib/types/bet';
 import { useAssetPrice } from '../hooks/useAssetPrice';
 import Image from 'next/image';
-import { useAccount, useConnect, useDisconnect, useSwitchChain, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useSwitchChain, useWriteContract, useWaitForTransactionReceipt, useBalance } from 'wagmi';
 import { farcasterFrame } from '@farcaster/frame-wagmi-connector';
 import { monadTestnet } from 'wagmi/chains';
 import dynamic from 'next/dynamic';
@@ -105,18 +105,36 @@ const BottomNav = dynamic(() => Promise.resolve(({
   isConnected, 
   address, 
   chainId, 
-  darkMode, 
-  handleWalletConnection, 
-  isPending
+  darkMode,
+  connectors,
+  connect,
+  switchChain,
+  balanceData,
+  isEthProviderAvailable,
+  connectError,
+  switchError
 }: { 
   isConnected: boolean;
   address?: string;
   chainId?: number;
   darkMode: boolean;
-  handleWalletConnection: () => void;
-  isPending: boolean;
+  connectors: readonly any[];
+  connect: (args: { connector: any }) => void;
+  switchChain: (args: { chainId: number }) => void;
+  balanceData?: { formatted: string };
+  isEthProviderAvailable: boolean;
+  connectError: Error | null;
+  switchError: Error | null;
 }) => {
   const [mounted, setMounted] = useState(false);
+  const [showBalance, setShowBalance] = useState(false);
+
+  // Function to format balance to 1 decimal place
+  const formatBalance = (balance: string | undefined) => {
+    if (!balance) return "...";
+    const num = parseFloat(balance);
+    return num.toFixed(1);
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -127,6 +145,12 @@ const BottomNav = dynamic(() => Promise.resolve(({
   return (
     <div className={`fixed bottom-0 left-0 right-0 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-t shadow-lg`}>
       <div className="container mx-auto px-4">
+        {!isEthProviderAvailable && (
+          <div className="text-red-400 font-bold py-2 text-center">
+            Wallet not available. Please open this app inside Warpcast.
+          </div>
+        )}
+
         <div className="flex items-center justify-between py-2">
           {/* Feed */}
           <button className={`flex flex-col items-center p-2 ${
@@ -149,50 +173,65 @@ const BottomNav = dynamic(() => Promise.resolve(({
           </button>
 
           {/* Wallet Connection */}
-          <button 
-            onClick={handleWalletConnection}
-            disabled={isPending}
-            className={`flex flex-col items-center p-2 relative ${
-              isConnected
-                ? darkMode 
-                  ? 'text-purple-400 hover:text-purple-300' 
-                  : 'text-purple-600 hover:text-purple-700'
-                : darkMode 
-                  ? 'text-gray-300 hover:text-purple-400' 
-                  : 'text-gray-600 hover:text-purple-600'
-            }`}
-          >
-            <div className="relative">
-              <Globe className="h-6 w-6" />
-              {isPending && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-yellow-400 animate-pulse" />
-              )}
-              {isConnected && !isPending && (
-                <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${
-                  chainId === monadTestnet.id
-                    ? 'bg-green-500'
-                    : 'bg-yellow-500'
-                }`} />
-              )}
-            </div>
-            {isPending ? (
-              <span className="text-xs mt-1">Connecting...</span>
-            ) : isConnected && chainId !== monadTestnet.id ? (
-              <span className="text-xs mt-1">Switch to Monad</span>
-            ) : isConnected ? (
-              <div className="flex flex-col items-center">
-                <span className="text-xs mt-1 font-mono">
-                  {address?.slice(0, 4)}...{address?.slice(-4)}
-                </span>
-                <span className="text-[10px] mt-0.5">
-                  {chainId === monadTestnet.id ? 'Monad' : 'Wrong Chain'}
-                </span>
-              </div>
-            ) : (
-              <span className="text-xs mt-1">Connect</span>
+          <div className="flex flex-col items-center relative">
+            {isEthProviderAvailable && !isConnected && (
+              <button
+                onClick={() => connect({ connector: connectors[0] })}
+                className={`flex flex-col items-center p-2 ${darkMode ? 'text-gray-300 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}
+              >
+                <Globe className="h-6 w-6" />
+                <span className="text-xs mt-1">Connect</span>
+              </button>
             )}
-          </button>
+
+            {isConnected && chainId !== monadTestnet.id && (
+              <button
+                onClick={() => switchChain({ chainId: monadTestnet.id })}
+                className={`flex flex-col items-center p-2 ${darkMode ? 'text-yellow-300 hover:text-yellow-200' : 'text-yellow-600 hover:text-yellow-700'}`}
+              >
+                <Globe className="h-6 w-6" />
+                <span className="text-xs mt-1">Switch Chain</span>
+              </button>
+            )}
+
+            {isConnected && chainId === monadTestnet.id && (
+              <>
+                <button
+                  onClick={() => setShowBalance(!showBalance)}
+                  className={`flex flex-col items-center p-2 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}
+                >
+                  <Globe className="h-6 w-6" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-xs mt-1 font-mono">
+                      {address?.slice(0, 4)}...{address?.slice(-4)}
+                    </span>
+                    <span className="text-[10px] mt-0.5">Monad</span>
+                  </div>
+                </button>
+
+                {/* Floating Balance Display */}
+                {showBalance && (
+                  <div 
+                    className={`absolute bottom-full mb-2 p-2 rounded-lg shadow-lg min-w-[150px] text-center
+                      ${darkMode ? 'bg-gray-700 text-gray-200' : 'bg-white text-gray-700'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}
+                  >
+                    <div className="text-sm font-medium">Balance</div>
+                    <div className="font-mono">
+                      {formatBalance(balanceData?.formatted)} MON
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
+
+        {/* Error Messages */}
+        {(connectError || switchError) && (
+          <div className="text-xs text-red-400 text-center pb-2">
+            {connectError?.message || "Could not switch chain automatically. Please switch your wallet to Monad Testnet."}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -282,9 +321,11 @@ interface PredictionSectionProps {
     predictionType: 'pump' | 'dump';
     priceThreshold: number;
     betAmount: number;
-  yay: number;
-  nay: number;
+    yay: number;
+    nay: number;
     expiryTime: number;
+    endPrice?: number;
+    thresholdMet?: boolean;
   };
   darkMode: boolean;
 }
@@ -302,6 +343,8 @@ const PredictionSection = React.memo(({ bet, darkMode }: PredictionSectionProps)
           priceThreshold={bet.priceThreshold}
           darkMode={darkMode}
           resolved={('status' in bet) ? bet.status === 'RESOLVED' : false}
+          endPrice={typeof bet.endPrice === 'number' ? bet.endPrice : undefined}
+          thresholdMet={typeof bet.thresholdMet === 'boolean' ? bet.thresholdMet : undefined}
         />
       </div>
     </div>
@@ -393,9 +436,11 @@ const Tooltip = ({ content, children, darkMode }: { content: string, children: R
 export default function BetCaster({ betcasterAddress }: BetcasterProps) {
   const { context, actions, isEthProviderAvailable } = useMiniAppContext() as { context: any, actions: typeof sdk.actions | null, isEthProviderAvailable: boolean };
   const { isConnected, address, chainId } = useAccount();
-  const { connect, isPending } = useConnect();
-  const { disconnect } = useDisconnect();
-  const { switchChain } = useSwitchChain();
+  const { connect, connectors, error: connectError } = useConnect();
+  const { switchChain, error: switchError } = useSwitchChain();
+  const { data: balanceData } = useBalance({
+    address: address,
+  });
   const [bets, setBets] = useState<Bet[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -689,7 +734,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
         address: betcasterAddress as `0x${string}`,
         abi: betcasterABI,
         functionName: 'createBet',
-        value: parseEther('0.05'), // 0.05 MON platform stake
+        value: parseEther('3'), // 3 MON platform stake
         args: [
           betId,
           parseEther(newBetVoteAmount.toString()), // voteStake
@@ -732,37 +777,12 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
     }
   };
 
-  // Improved auto-connect and chain switch logic
+  // Simple auto-connect effect matching sample code
   useEffect(() => {
-    if (!mounted) return;
-    // If not connected, always try to connect
-    if (!isConnected && isEthProviderAvailable && !isPending) {
-      connect({ connector: farcasterFrame() });
+    if (isEthProviderAvailable && !isConnected && connectors.length > 0) {
+      connect({ connector: connectors[0] });
     }
-    // If connected but not on Monad, immediately switch
-    if (isConnected && chainId !== monadTestnet.id && !isPending) {
-      switchChain({ chainId: monadTestnet.id });
-    }
-  }, [mounted, isConnected, chainId, connect, switchChain, isEthProviderAvailable, isPending]);
-
-  // Function to handle wallet connection
-  const handleWalletBtn = () => {
-    if (!isConnected && !isPending) {
-      connect({ connector: farcasterFrame() });
-    } else if (isConnected && chainId !== monadTestnet.id && !isPending) {
-      switchChain({ chainId: monadTestnet.id });
-    }
-  };
-
-  // Function to handle chain switch
-  const handleChainSwitch = async () => {
-    try {
-      await switchChain({ chainId: monadTestnet.id });
-      setShowChainSwitchModal(false);
-    } catch (err) {
-      console.error('Chain switch error:', err);
-    }
-  };
+  }, [isEthProviderAvailable, isConnected, connectors, connect]);
 
   useEffect(() => {
     setMounted(true);
@@ -1068,25 +1088,19 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
 
       {/* Client-side only components */}
       {mounted && (
-        <>
-          <BottomNav 
-            isConnected={isConnected}
-            address={address}
-            chainId={chainId}
-            darkMode={darkMode}
-            handleWalletConnection={handleWalletBtn}
-            isPending={isPending}
-          />
-
-          {showChainSwitchModal && (
-            <ChainSwitchModal
-              darkMode={darkMode}
-              chainId={chainId}
-              onClose={() => setShowChainSwitchModal(false)}
-              onSwitch={handleChainSwitch}
-            />
-          )}
-        </>
+        <BottomNav 
+          isConnected={isConnected}
+          address={address}
+          chainId={chainId}
+          darkMode={darkMode}
+          connectors={connectors}
+          connect={connect}
+          switchChain={switchChain}
+          balanceData={balanceData}
+          isEthProviderAvailable={isEthProviderAvailable}
+          connectError={connectError}
+          switchError={switchError}
+        />
       )}
 
       {/* Add padding at the bottom to account for navigation bar */}
@@ -1150,7 +1164,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
               <div>
                   <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 transition-colors duration-200`}>Platform Stake</label>
                   <div className={`w-full px-3 py-2 border rounded-md ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-700'} transition-colors duration-200`}>
-                    0.05 MON (Fixed)
+                    3 MON (Fixed)
                   </div>
                   <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1 transition-colors duration-200`}>
                     Required platform stake to create a bet. This ensures quality predictions.
@@ -1182,6 +1196,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                   onChange={(e) => setNewBetDuration(e.target.value)}
                 >
                   <option value="">Select duration...</option>
+                  <option value="0.0833">5 minutes</option>
                   <option value="0.1667">10 minutes</option>
                   <option value="0.5">30 minutes</option>
                   <option value="1">1 hour</option>
@@ -1190,6 +1205,9 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                   <option value="24">24 hours</option>
                   <option value="48">48 hours</option>
                   <option value="72">72 hours</option>
+                  <option value="168">7 days</option>
+                  <option value="336">14 days</option>
+                  <option value="720">30 days</option>
                 </select>
               </div>
               
@@ -1418,7 +1436,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                     <span>Failed - Click to retry</span>
                   </div>
                 ) : (
-                  'Create Bet (0.05 MON stake)'
+                  'Create Bet (3 MON stake)'
                 )}
               </button>
 
