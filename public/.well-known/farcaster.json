@@ -21,7 +21,7 @@
     "tags": ["monad", "farcaster", "betting", "prediction", "crypto"],
     "primaryCategory": "finance",
     "buttonTitle": "Bet Now!",
-    "splashImageUrl": "https://betcaster.netlify.app/images/splash.jpeg",
+    "splashImageUrl": "https://betcaster.netlify.app/images/splash.png",
     "splashBackgroundColor": "#ffffff",
     "webhookUrl": "https://betcaster.netlify.app/api/webhook"
   }
