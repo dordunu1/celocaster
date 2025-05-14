@@ -161,15 +161,23 @@ const BottomNav = dynamic(() => Promise.resolve(({
           </button>
 
           {/* My Bets */}
-          <button className={`flex flex-col items-center p-2 ${darkMode ? 'text-gray-300 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}>
+          <button 
+            className={`flex flex-col items-center p-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'} cursor-not-allowed`}
+            disabled={true}
+          >
             <TrendingUp className="h-6 w-6" />
             <span className="text-xs mt-1">My Bets</span>
+            <span className="text-[10px] opacity-75">Coming Soon</span>
           </button>
 
           {/* Leaderboard */}
-          <button className={`flex flex-col items-center p-2 ${darkMode ? 'text-gray-300 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}>
+          <button 
+            className={`flex flex-col items-center p-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'} cursor-not-allowed`}
+            disabled={true}
+          >
             <Activity className="h-6 w-6" />
             <span className="text-xs mt-1">Leaders</span>
+            <span className="text-[10px] opacity-75">Coming Soon</span>
           </button>
 
           {/* Wallet Connection */}
@@ -766,14 +774,16 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
   };
 
   const handleNewBetVoteAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value);
-    if (!isNaN(value)) {
-      if (value < MIN_VOTE_STAKE) {
-        alert(`Vote stake must be at least ${MIN_VOTE_STAKE} MON`);
-        setNewBetVoteAmount(MIN_VOTE_STAKE);
-      } else {
-        setNewBetVoteAmount(value);
-      }
+    const value = e.target.value;
+    // Allow empty value for clearing
+    if (value === '') {
+      setNewBetVoteAmount(0);
+      return;
+    }
+    
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      setNewBetVoteAmount(numValue);
     }
   };
 
