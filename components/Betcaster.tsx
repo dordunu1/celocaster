@@ -105,7 +105,7 @@ const BottomNav = dynamic(() => Promise.resolve(({
   isConnected, 
   address, 
   chainId, 
-  darkMode,
+  darkMode, 
   connectors,
   connect,
   switchChain,
@@ -183,14 +183,14 @@ const BottomNav = dynamic(() => Promise.resolve(({
           {/* Wallet Connection */}
           <div className="flex flex-col items-center relative">
             {isEthProviderAvailable && !isConnected && (
-              <button
+          <button 
                 onClick={() => connect({ connector: connectors[0] })}
                 className={`flex flex-col items-center p-2 ${darkMode ? 'text-gray-300 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}
-              >
-                <Globe className="h-6 w-6" />
+          >
+              <Globe className="h-6 w-6" />
                 <span className="text-xs mt-1">Connect</span>
               </button>
-            )}
+              )}
 
             {isConnected && chainId !== monadTestnet.id && (
               <button
@@ -209,13 +209,13 @@ const BottomNav = dynamic(() => Promise.resolve(({
                   className={`flex flex-col items-center p-2 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}
                 >
                   <Globe className="h-6 w-6" />
-                  <div className="flex flex-col items-center">
-                    <span className="text-xs mt-1 font-mono">
-                      {address?.slice(0, 4)}...{address?.slice(-4)}
-                    </span>
+              <div className="flex flex-col items-center">
+                <span className="text-xs mt-1 font-mono">
+                  {address?.slice(0, 4)}...{address?.slice(-4)}
+                </span>
                     <span className="text-[10px] mt-0.5">Monad</span>
-                  </div>
-                </button>
+              </div>
+          </button>
 
                 {/* Floating Balance Display */}
                 {showBalance && (
@@ -226,7 +226,7 @@ const BottomNav = dynamic(() => Promise.resolve(({
                     <div className="text-sm font-medium">Balance</div>
                     <div className="font-mono">
                       {formatBalance(balanceData?.formatted)} MON
-                    </div>
+        </div>
                   </div>
                 )}
               </>
@@ -441,11 +441,37 @@ const Tooltip = ({ content, children, darkMode }: { content: string, children: R
   );
 };
 
+// Add wallet error handler hook
+function useWalletErrorHandler() {
+  const { disconnect } = useDisconnect();
+  return (err: unknown) => {
+    if (
+      typeof err === 'object' &&
+      err !== null &&
+      'message' in err &&
+      typeof (err as any).message === 'string'
+    ) {
+      const message = (err as any).message as string;
+      if (
+        message.includes('getChainId is not a function') ||
+        message.includes('session') ||
+        message.includes('connector')
+      ) {
+        disconnect();
+        alert('Your wallet session expired or is broken. Please reconnect your wallet.');
+        return true;
+      }
+    }
+    return false;
+  };
+}
+
 export default function BetCaster({ betcasterAddress }: BetcasterProps) {
   const { context, actions, isEthProviderAvailable } = useMiniAppContext() as { context: any, actions: typeof sdk.actions | null, isEthProviderAvailable: boolean };
   const { isConnected, address, chainId } = useAccount();
   const { connect, connectors, error: connectError } = useConnect();
   const { switchChain, error: switchError } = useSwitchChain();
+  const { disconnect } = useDisconnect();
   const { data: balanceData } = useBalance({
     address: address,
   });
@@ -463,13 +489,19 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
   const [isAutoConnecting, setIsAutoConnecting] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [connectionAttempted, setConnectionAttempted] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [isWalletLoading, setIsWalletLoading] = useState(false);
+  const [pendingTxHash, setPendingTxHash] = useState<string | null>(null);
+  
+  // Add wallet connection state tracking
+  const [walletState, setWalletState] = useState<'disconnected' | 'wrong_chain' | 'connected'>('disconnected');
   
   // Form state for create bet modal
   const [newBetContent, setNewBetContent] = useState('');
   const [newBetCategory, setNewBetCategory] = useState('Crypto');
   const [newBetDuration, setNewBetDuration] = useState('24');
   const [commentText, setCommentText] = useState('');
-  const [newBetVoteAmount, setNewBetVoteAmount] = useState<number>(0.1);
+  const [newBetVoteAmount, setNewBetVoteAmount] = useState<string>('0.1');
   const [selectedAsset, setSelectedAsset] = useState('');
 
   // Add new state for bet type
@@ -485,6 +517,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
 
   // Add contract write hook with proper error handling
   const { writeContract, data: createBetData, isError: isWriteError, error: writeError } = useWriteContract();
+  const { writeContractAsync } = useWriteContract();
 
   // Add transaction receipt hook
   const { isLoading: isTransactionPending, isSuccess: isTransactionSuccess } = useWaitForTransactionReceipt({
@@ -565,7 +598,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
         category: newBetCategory as Category,
         content: newBetContent.trim(),
         stakeAmount: 2,
-        betAmount: newBetVoteAmount,
+        betAmount: Number(newBetVoteAmount),
         timeLeft: newBetDuration,
         expiryTime: Date.now() + (durationHours * 60 * 60 * 1000),
         timestamp: Date.now(),
@@ -603,8 +636,10 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
       setPendingBetId(null);
     } catch (err) {
       console.error('Failed to create bet in Firebase:', err);
+      alert('Failed to save bet details. Please check your bets or try again.'); // More professional error
     } finally {
-      setIsCreatingBet(false);
+      setIsCreatingBet(false); // Reset creating flag whether success or Firestore error
+      loadBets(); // Refresh bets list after attempting Firestore operation
     }
   };
 
@@ -716,7 +751,131 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
     }
   };
   
-  // Update bet creation to show loading state
+  // Update wallet state when connection changes
+  useEffect(() => {
+    if (!isConnected) {
+      setWalletState('disconnected');
+    } else if (chainId !== monadTestnet.id) {
+      setWalletState('wrong_chain');
+    } else {
+      setWalletState('connected');
+    }
+  }, [isConnected, chainId]);
+
+  // Handle wallet connection
+  const handleWalletConnect = async () => {
+    setIsWalletLoading(true);
+    try {
+      if (connectors && connectors.length > 0 && connectors[0]?.id === 'farcasterFrame') {
+        await connect({ connector: connectors[0] });
+      } else {
+        alert('No valid wallet connector found. Please reload the app.');
+      }
+    } catch (err) {
+      if (!useWalletErrorHandler()(err)) {
+        console.error('Wallet connection failed:', err);
+        alert('Failed to connect wallet. Please try again.');
+      }
+    } finally {
+      setIsWalletLoading(false);
+    }
+  };
+
+  // Handle chain switch
+  const handleChainSwitch = async () => {
+    setIsWalletLoading(true);
+    try {
+      await switchChain({ chainId: monadTestnet.id });
+    } catch (err) {
+      console.error('Chain switch failed:', err);
+      alert('Failed to switch chain. Please try manually in your wallet.');
+    } finally {
+      setIsWalletLoading(false);
+    }
+  };
+
+  // Wallet Modal Component
+  const WalletModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl p-6 m-4 max-w-sm w-full`}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className={`text-lg font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+            {walletState === 'disconnected' ? 'Connect Wallet' : 'Switch Network'}
+          </h3>
+          <button 
+            onClick={() => setShowWalletModal(false)}
+            className={`${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-600'}`}
+          >
+            <X size={20} />
+          </button>
+        </div>
+        
+        <div className="mb-6">
+          {walletState === 'disconnected' ? (
+            <>
+              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
+                Please connect your wallet to use BetCaster
+              </p>
+              <button
+                onClick={handleWalletConnect}
+                disabled={isWalletLoading}
+                className={`w-full py-2 px-4 rounded-lg font-medium ${
+                  darkMode 
+                    ? 'bg-purple-600 hover:bg-purple-500 text-white' 
+                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+                } ${isWalletLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isWalletLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                    Connecting...
+                  </div>
+                ) : (
+                  'Connect Wallet'
+                )}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
+                Please switch to Monad Testnet to use BetCaster
+              </p>
+              <div className={`flex items-center p-3 rounded-lg mb-4 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                <div className="flex-1">
+                  <div className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                    Current Network
+                  </div>
+                  <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {chainId ? `Chain ID: ${chainId}` : 'Unknown Network'}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handleChainSwitch}
+                disabled={isWalletLoading}
+                className={`w-full py-2 px-4 rounded-lg font-medium ${
+                  darkMode 
+                    ? 'bg-purple-600 hover:bg-purple-500 text-white' 
+                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+                } ${isWalletLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isWalletLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                    Switching...
+                  </div>
+                ) : (
+                  'Switch to Monad Testnet'
+                )}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Update the handleCreateBet function to check wallet state
   const handleCreateBet = async () => {
     if (!context?.user?.fid) {
       alert('Please log in to create a bet');
@@ -724,10 +883,26 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
     }
 
     if (!newBetContent.trim()) return;
+
+    // Check wallet state before proceeding
+    if (walletState === 'disconnected') {
+      setShowWalletModal(true);
+      return;
+    }
+
+    if (walletState === 'wrong_chain') {
+      setShowWalletModal(true);
+      return;
+    }
     
     if (!betcasterAddress) {
       console.error('Contract address is undefined');
       alert('Contract address is not configured');
+      return;
+    }
+
+    if (!newBetVoteAmount || isNaN(Number(newBetVoteAmount)) || Number(newBetVoteAmount) < MIN_VOTE_STAKE) {
+      alert(`Vote stake less than ${MIN_VOTE_STAKE} MON will fail. Please enter at least ${MIN_VOTE_STAKE} MON.`);
       return;
     }
 
@@ -738,20 +913,27 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
       const betId = `${context.user.fid}-${Date.now()}`; // Unique bet ID
       setPendingBetId(betId);
 
+      let gasLimit;
+      try {
+        gasLimit = BigInt(500000);
+      } catch {
+        gasLimit = undefined;
+      }
       const params = {
         address: betcasterAddress as `0x${string}`,
         abi: betcasterABI,
         functionName: 'createBet',
-        value: parseEther('3'), // 3 MON platform stake
+        value: parseEther('3'), // ✅ Correct!
         args: [
           betId,
-          parseEther(newBetVoteAmount.toString()), // voteStake
+          parseEther(newBetVoteAmount), // voteStake
           BigInt(durationSeconds), // duration in seconds
           betType === 'verified', // isVerified
           selectedAsset || '', // asset (empty string for non-verified bets)
-          BigInt(Math.round(priceThreshold * 10)), // priceThreshold (tenths of a percent)
+          BigInt(priceThreshold), // priceThreshold (whole number percent)
           predictionType === 'pump' // isPump
-        ]
+        ],
+        gas: BigInt(500000) // Add manual gas limit as bigint
       } as const;
 
       console.log('Creating bet on-chain with betId:', betId);
@@ -759,14 +941,71 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
       console.log('createBet contract params:', params);
 
       // Call contract function
-      const hash = await writeContract(params);
+      const hash = await writeContractAsync(params);
       console.log('Transaction hash:', hash);
+      if (!hash || typeof hash !== 'string') {
+        setShowReconnectModal(true);
+        setIsCreatingBet(false);
+        return;
+      }
+      setPendingTxHash(hash); // Wait for confirmation before Firestore creation
+      // REMOVE: Immediately close modal and reset state
+      // REMOVE: setIsCreateModalOpen(false);
+      // REMOVE: setIsCreatingBet(false); // This will be handled by handleTransactionSuccess or its caller
+      // REMOVE: setNewBetContent('');
+      // REMOVE: setBetType('voting');
+      // REMOVE: setPredictionType('pump');
+      // REMOVE: setPriceThreshold(5);
+      // REMOVE: setPendingBetId(null); // CRITICAL: Keep pendingBetId until Firestore creation
+      // REMOVE: loadBets();
 
     } catch (err) {
       console.error('Failed to create bet:', err);
-      alert('Failed to create bet: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      alert('Failed to create bet: ' + (err instanceof Error ? err.message : JSON.stringify(err)));
       setIsCreatingBet(false);
     }
+  };
+
+  // Update the Wallet button in the navigation
+  const WalletButton = () => {
+    if (walletState === 'disconnected') {
+      return (
+        <button
+          onClick={() => setShowWalletModal(true)}
+          className={`flex flex-col items-center p-2 ${darkMode ? 'text-gray-300 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}
+        >
+          <Globe className="h-6 w-6" />
+          <span className="text-xs mt-1">Connect</span>
+        </button>
+      );
+    }
+
+    if (walletState === 'wrong_chain') {
+      return (
+        <button
+          onClick={() => setShowWalletModal(true)}
+          className={`flex flex-col items-center p-2 text-yellow-500 hover:text-yellow-400`}
+        >
+          <Globe className="h-6 w-6" />
+          <span className="text-xs mt-1">Switch Chain</span>
+        </button>
+      );
+    }
+
+    return (
+      <button
+        onClick={() => setShowWalletModal(true)}
+        className={`flex flex-col items-center p-2 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}
+      >
+        <Globe className="h-6 w-6" />
+        <div className="flex flex-col items-center">
+          <span className="text-xs mt-1 font-mono">
+            {address?.slice(0, 4)}...{address?.slice(-4)}
+          </span>
+          <span className="text-[10px] mt-0.5">Monad</span>
+        </div>
+      </button>
+    );
   };
 
   const toggleDarkMode = () => {
@@ -774,17 +1013,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
   };
 
   const handleNewBetVoteAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    // Allow empty value for clearing
-    if (value === '') {
-      setNewBetVoteAmount(0);
-      return;
-    }
-    
-    const numValue = parseFloat(value);
-    if (!isNaN(numValue)) {
-      setNewBetVoteAmount(numValue);
-    }
+    setNewBetVoteAmount(e.target.value);
   };
 
   // Simple auto-connect effect matching sample code
@@ -800,6 +1029,64 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
 
   // In the BetCaster component, add state to track how many comments to show per bet
   const [commentsShown, setCommentsShown] = useState<{ [betId: string]: number }>({});
+
+  const handleWalletError = useWalletErrorHandler();
+
+  const [showReconnectModal, setShowReconnectModal] = useState(false);
+
+  // Add a modal for reconnecting the wallet
+  const ReconnectWalletModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl p-6 m-4 max-w-sm w-full`}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className={`text-lg font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Wallet Session Expired</h3>
+          <button 
+            onClick={() => setShowReconnectModal(false)}
+            className={`${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-600'}`}
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="mb-6">
+          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
+            Your wallet session expired or failed to send the transaction. Please reconnect your wallet to continue.
+          </p>
+          <button
+            onClick={async () => {
+              disconnect();
+              setShowReconnectModal(false);
+              setTimeout(() => handleWalletConnect(), 100); // Prompt wallet connect after disconnect
+            }}
+            className={`w-full py-2 px-4 rounded-lg font-medium ${
+              darkMode 
+                ? 'bg-purple-600 hover:bg-purple-500 text-white' 
+                : 'bg-purple-600 hover:bg-purple-700 text-white'
+            }`}
+          >
+            Reconnect Wallet
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Add transaction receipt hook for robust confirmation
+  const { isSuccess: isTxConfirmed } = useWaitForTransactionReceipt({ hash: pendingTxHash as `0x${string}` | undefined });
+
+  useEffect(() => {
+    if (isTxConfirmed && pendingTxHash) {
+      handleTransactionSuccess();
+      // REMOVE: Redundant state resets, handled by handleTransactionSuccess
+      // REMOVE: setIsCreateModalOpen(false);
+      // REMOVE: setIsCreatingBet(false);
+      // REMOVE: setNewBetContent('');
+      // REMOVE: setBetType('voting');
+      // REMOVE: setPredictionType('pump');
+      // REMOVE: setPriceThreshold(5);
+      // REMOVE: loadBets(); 
+      setPendingTxHash(null); // Clear pending transaction hash after handling
+    }
+  }, [isTxConfirmed, pendingTxHash, handleTransactionSuccess]); // Added handleTransactionSuccess to dependency array
 
   return (
     <div className={`flex flex-col min-h-screen ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-800'} transition-colors duration-200`}>
@@ -1098,11 +1385,11 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
 
       {/* Client-side only components */}
       {mounted && (
-        <BottomNav 
-          isConnected={isConnected}
-          address={address}
-          chainId={chainId}
-          darkMode={darkMode}
+          <BottomNav 
+            isConnected={isConnected}
+            address={address}
+            chainId={chainId}
+            darkMode={darkMode}
           connectors={connectors}
           connect={connect}
           switchChain={switchChain}
@@ -1110,7 +1397,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
           isEthProviderAvailable={isEthProviderAvailable}
           connectError={connectError}
           switchError={switchError}
-        />
+            />
       )}
 
       {/* Add padding at the bottom to account for navigation bar */}
@@ -1401,11 +1688,11 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                       <div className="flex items-center space-x-2">
                         <input
                           type="range"
-                          min="0.5"
-                          max="50"
-                          step="0.5"
+                          min="1"
+                          max="20"
+                          step="1"
                           value={priceThreshold}
-                          onChange={(e) => setPriceThreshold(parseFloat(e.target.value))}
+                          onChange={(e) => setPriceThreshold(parseInt(e.target.value, 10))}
                           className="flex-1"
                         />
                         <span className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{priceThreshold}%</span>
@@ -1455,6 +1742,14 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
           </div>
         </div>
       )}
+
+      {/* Add the WalletModal */}
+      {showWalletModal && <WalletModal />}
+      
+      {/* Update the wallet button in navigation */}
+      <WalletButton />
+
+      {showReconnectModal && <ReconnectWalletModal />}
     </div>
   );
 } 

@@ -7,6 +7,25 @@ import BetcasterArtifact from '../artifacts/contracts/Betcaster.sol/Betcaster.js
 import { ethers } from 'ethers';
 import { writeContract } from 'wagmi/actions';
 
+// Add FallbackProvider setup for multiple RPCs
+const MONAD_RPC_URLS = [
+  process.env.NEXT_PUBLIC_MONAD_RPC_1,
+  process.env.NEXT_PUBLIC_MONAD_RPC_2,
+  process.env.NEXT_PUBLIC_MONAD_RPC_3,
+  process.env.NEXT_PUBLIC_MONAD_RPC_4,
+  process.env.NEXT_PUBLIC_MONAD_RPC_5,
+  process.env.NEXT_PUBLIC_MONAD_RPC_6,
+  process.env.NEXT_PUBLIC_MONAD_RPC_7,
+].filter(Boolean);
+
+function getFallbackProvider() {
+  if (MONAD_RPC_URLS.length === 1) {
+    return new ethers.providers.JsonRpcProvider(MONAD_RPC_URLS[0]);
+  }
+  const providers = MONAD_RPC_URLS.map(url => new ethers.providers.JsonRpcProvider(url));
+  return new ethers.providers.FallbackProvider(providers);
+}
+
 // Import ABI for the castVote function
 const betcasterABI = BetcasterArtifact.abi;
 
@@ -54,17 +73,12 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
       // Only proceed if we have a transaction hash
       if (!currentTxHash) return;
 
-      console.log('Monitoring transaction:', currentTxHash);
-
       if (isTransactionSuccess && lastVoteType) {
-        console.log('Vote transaction successful:', currentTxHash);
         try {
           // Update Firebase after blockchain transaction is confirmed
           await betService.voteBet(betId, context?.user?.fid.toString() || '', lastVoteType);
           onVoteSuccess?.();
-          console.log('Vote updated in Firebase');
         } catch (err) {
-          console.error('Failed to update vote in Firebase:', err);
           alert('Vote confirmed on blockchain but failed to update in database. Please refresh.');
         } finally {
           setIsVoting(false);
@@ -72,7 +86,6 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
           setCurrentTxHash(undefined);
         }
       } else if (transactionError) {
-        console.error('Transaction error:', transactionError);
         setIsVoting(false);
         setLastVoteType(null);
         setCurrentTxHash(undefined);
@@ -97,27 +110,23 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
 
   const handleVote = async (isYay: boolean) => {
     if (!context?.user?.fid) {
-      console.log('Vote failed: User not logged in');
-      alert('Please log in to vote');
+      alert('Please connect your Farcaster account to vote');
       return;
     }
 
     if (!chainId) {
-      console.log('Vote failed: No chain ID');
-      alert('Please connect to Monad network');
+      alert('Please connect your wallet');
       return;
     }
 
     if (!address) {
-      console.log('Vote failed: No wallet address');
       alert('Please connect your wallet');
       return;
     }
 
     // Validate vote stake amount
     if (voteStake < MIN_VOTE_STAKE) {
-      console.log(`Vote failed: Stake too low. Required: ${MIN_VOTE_STAKE} MON, Provided: ${voteStake} MON`);
-      alert(`Vote stake must be at least ${MIN_VOTE_STAKE} MON`);
+      alert(`Minimum stake required is ${MIN_VOTE_STAKE} MON`);
       return;
     }
 
@@ -127,15 +136,6 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
     try {
       // Convert voteStake from MON to wei
       const voteStakeWei = parseEther(voteStake.toString());
-      console.log('Starting vote transaction with details:', {
-        voteStake,
-        voteStakeWei: voteStakeWei.toString(),
-        userAddress: address,
-        contractAddress: betcasterAddress,
-        chainId,
-        betId,
-        isYay
-      });
 
       // Prepare transaction parameters with proper configuration
       const params = {
@@ -148,38 +148,26 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
         account: address,
       } as const;
 
-      console.log('Sending vote transaction with params:', {
-        ...params,
-        value: params.value.toString()
-      });
-
       // Send transaction and get hash
       const txResponse = await writeContractAsync(params);
-      console.log('Transaction submitted successfully. Hash:', txResponse);
       setCurrentTxHash(txResponse);
 
     } catch (err) {
-      console.error('Vote transaction failed with error:', err);
       setIsVoting(false);
       setLastVoteType(null);
       setCurrentTxHash(undefined);
       
       if (err instanceof Error) {
-        console.log('Error details:', {
-          message: err.message,
-          name: err.name,
-          stack: err.stack
-        });
-        
         if (err.message.includes('insufficient funds')) {
-          alert('Insufficient funds to place vote');
+          alert('Insufficient MON balance');
         } else if (err.message.includes('user rejected') || err.message.includes('user denied')) {
-          alert('Transaction was cancelled');
+          // Don't show any alert for user rejections
+          return;
         } else {
-          alert('Failed to vote: ' + err.message);
+          alert('Failed to place vote. Please try again');
         }
       } else {
-        alert('Failed to vote: Unknown error');
+        alert('Failed to place vote. Please try again');
       }
     }
   };
@@ -193,13 +181,6 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
 
   // Debug logs for claim eligibility
   useEffect(() => {
-    console.log('[BetVoting] Debug:', {
-      isResolved,
-      yayWon,
-      userVote,
-      hasClaimed,
-      canClaim: isResolved && yayWon !== null && userVote && ((yayWon && userVote === 'yay') || (!yayWon && userVote === 'nay')) && !hasClaimed
-    });
   }, [isResolved, yayWon, userVote, hasClaimed]);
 
   // Fetch yayWon from contract if resolved
@@ -207,17 +188,12 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
     async function fetchYayWon() {
       if (!isResolved) return;
       try {
-        const monadRpcUrl = process.env.NEXT_PUBLIC_MONAD_RPC_URL;
-        console.log('[BetVoting] Using Monad RPC URL:', monadRpcUrl);
-        const provider = new ethers.providers.JsonRpcProvider(monadRpcUrl);
+        const provider = getFallbackProvider();
         const contract = new ethers.Contract(betcasterAddress, betcasterABI, provider);
         const result = await contract.getBetInfo(betId);
         setYayWon(result.yayWon);
-        // Debug log
-        console.log('[BetVoting] getBetInfo:', result);
       } catch (e) {
         setYayWon(null);
-        console.error('[BetVoting] Failed to fetch yayWon:', e);
       }
     }
     fetchYayWon();
@@ -236,16 +212,12 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
     async function checkClaimed() {
       if (!address || !betId) return;
       try {
-        const monadRpcUrl = process.env.NEXT_PUBLIC_MONAD_RPC_URL;
-        const provider = new ethers.providers.JsonRpcProvider(monadRpcUrl);
+        const provider = getFallbackProvider();
         const contract = new ethers.Contract(betcasterAddress, betcasterABI, provider);
         const [, , claimed] = await contract.getUserVoteInfo(betId, address);
         setHasClaimed(claimed);
-        // Debug log
-        console.log('[BetVoting] checkClaimed:', claimed);
       } catch (e) {
         setHasClaimed(false);
-        console.error('[BetVoting] Failed to check claimed status:', e);
       }
     }
     checkClaimed();
@@ -264,36 +236,28 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
         account: address,
       });
       
-      console.log('Claim transaction submitted:', txResponse);
-      setCurrentTxHash(txResponse);
-      
-      // Wait for transaction to be mined (handled by useEffect)
-      // After claim, re-fetch claim status
       setTimeout(async () => {
-        await new Promise(res => setTimeout(res, 2000)); // Wait a bit for chain update
-        const monadRpcUrl = process.env.NEXT_PUBLIC_MONAD_RPC_URL;
-        const provider = new ethers.providers.JsonRpcProvider(monadRpcUrl);
+        await new Promise(res => setTimeout(res, 2000));
+        const provider = getFallbackProvider();
         const contract = new ethers.Contract(betcasterAddress, betcasterABI, provider);
         const [, , claimed] = await contract.getUserVoteInfo(betId, address);
         setHasClaimed(claimed);
-        console.log('[BetVoting] checkClaimed (after claim):', claimed);
         onVoteSuccess?.();
-        // Only close the modal after claim is confirmed and UI is updated
         setShowClaimModal(false);
         alert('Prize claimed successfully!');
       }, 3000);
     } catch (e) {
-      console.error('Failed to claim prize:', e);
       if (e instanceof Error) {
         if (e.message.includes('insufficient funds')) {
-          alert('Insufficient funds to claim prize');
+          alert('Insufficient MON for gas fees');
         } else if (e.message.includes('user rejected') || e.message.includes('user denied')) {
-          alert('Transaction was cancelled');
+          // Don't show any alert for user rejections
+          return;
         } else {
-          alert('Failed to claim prize: ' + e.message);
+          alert('Failed to claim prize. Please try again');
         }
       } else {
-        alert('Failed to claim prize: Unknown error');
+        alert('Failed to claim prize. Please try again');
       }
       setShowClaimModal(false);
     } finally {

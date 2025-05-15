@@ -13,19 +13,47 @@ import {
 } from "wagmi";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
 
+// Add wallet error handler hook
+function useWalletErrorHandler() {
+  const { disconnect } = useDisconnect();
+  return (err: unknown) => {
+    if (
+      typeof err === 'object' &&
+      err !== null &&
+      'message' in err &&
+      typeof (err as any).message === 'string' &&
+      (
+        (err as any).message.includes('getChainId is not a function') ||
+        (err as any).message.includes('session') ||
+        (err as any).message.includes('connector')
+      )
+    ) {
+      disconnect();
+      alert('Your wallet session expired or is broken. Please reconnect your wallet.');
+      return true;
+    }
+    return false;
+  };
+}
+
 export function WalletActions() {
   const { isEthProviderAvailable } = useMiniAppContext();
   const { isConnected, address, chainId } = useAccount();
   const { disconnect } = useDisconnect();
   const { data: hash, sendTransaction } = useSendTransaction();
   const { switchChain } = useSwitchChain();
-  const { connect } = useConnect();
+  const { connect, connectors } = useConnect();
+  const handleWalletError = useWalletErrorHandler();
 
   async function sendTransactionHandler() {
-    sendTransaction({
+    try {
+      await sendTransaction({
       to: "0x7f748f154B6D180D35fA12460C7E4C631e28A9d7",
       value: parseEther("1"),
     });
+    } catch (err) {
+      handleWalletError(err);
+    }
   }
 
   return (
@@ -86,13 +114,30 @@ export function WalletActions() {
             >
               Disconnect Wallet
             </button>
+            {/* Reconnect Wallet Button */}
+            <button
+              className="bg-yellow-200 text-black rounded-md p-2 text-sm"
+              onClick={() => disconnect()}
+            >
+              Reconnect Wallet
+            </button>
           </div>
         ) : (
           isEthProviderAvailable ?
           (
             <button
               className="bg-white text-black w-full rounded-md p-2 text-sm"
-              onClick={() => connect({ connector: farcasterFrame() })}
+              onClick={() => {
+                try {
+                  if (connectors && connectors.length > 0 && connectors[0]?.id === 'farcasterFrame') {
+                    connect({ connector: connectors[0] });
+                  } else {
+                    alert('No valid wallet connector found. Please reload the app.');
+                  }
+                } catch (err) {
+                  handleWalletError(err);
+                }
+              }}
             >
               Connect Wallet
             </button>
