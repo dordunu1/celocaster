@@ -12,6 +12,7 @@ import {
   useSwitchChain,
 } from "wagmi";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
+import toast from 'react-hot-toast';
 
 // Add wallet error handler hook
 function useWalletErrorHandler() {
@@ -29,7 +30,7 @@ function useWalletErrorHandler() {
       )
     ) {
       disconnect();
-      alert('Your wallet session expired or is broken. Please reconnect your wallet.');
+      toast.error('Your wallet session expired or is broken. Please reconnect your wallet.');
       return true;
     }
     return false;
@@ -132,7 +133,7 @@ export function WalletActions() {
                   if (connectors && connectors.length > 0 && connectors[0]?.id === 'farcasterFrame') {
                     connect({ connector: connectors[0] });
                   } else {
-                    alert('No valid wallet connector found. Please reload the app.');
+                    toast.error('No valid wallet connector found. Please reload the app.');
                   }
                 } catch (err) {
                   handleWalletError(err);

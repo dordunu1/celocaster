@@ -66,7 +66,7 @@ export default function HotBetsRow({ darkMode }: HotBetsRowProps) {
             <HotBetCard key={bet.id} bet={bet} darkMode={darkMode} />
           ))
         ) : (
-          <span className={`inline-flex items-center mx-6 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>No hot bets yet.</span>
+          <span className={`inline-flex items-center mx-6 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Loading hot bets...</span>
         )}
       </div>
       <style jsx>{`

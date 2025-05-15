@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { Clock, Award, MessageSquare, ThumbsUp, ThumbsDown, ChevronUp, ChevronDown, Edit3, TrendingUp, Activity, Globe, X, Moon, Sun, Info, User, Share2, Flame } from 'lucide-react';
 import { useMiniAppContext } from '../hooks/use-miniapp-context';
 import sdk from '@farcaster/frame-sdk';
-import { marketService } from '../lib/services/marketService';
 import { betService } from '../lib/services/betService';
 import { db } from '../lib/firebase/config';
 import { collection, query, where, onSnapshot, getDocs, orderBy } from 'firebase/firestore';
@@ -19,9 +18,24 @@ import dynamic from 'next/dynamic';
 import BetPriceTracker from './BetPriceTracker';
 import { parseEther } from 'viem';
 import BetVoting from './BetVoting';
+import { Abi } from 'viem';
 import betcasterArtifact from '../artifacts/contracts/Betcaster.sol/Betcaster.json';
-const betcasterABI = betcasterArtifact.abi;
+const betcasterABI = betcasterArtifact.abi as Abi;
 import HotBetsRow from './HotBetsRow';
+import CountdownTimer from './CountdownTimer';
+import BottomNav from './BottomNav';
+import ChainSwitchModal from './ChainSwitchModal';
+import PredictionSection from './PredictionSection';
+import BetInfo from './BetInfo';
+import Tooltip from './Tooltip';
+import WalletModal from './WalletModal';
+import ReconnectWalletModal from './ReconnectWalletModal';
+import CreateBetModal from './CreateBetModal';
+import { useWallet } from '../hooks/useWallet';
+import { useUIState } from '../hooks/useUIState';
+import { useCreateBet } from '../hooks/useCreateBet';
+import { useBets } from '../hooks/useBets';
+import { useComments } from '../hooks/useComments';
 
 // Add contract address from app/page.tsx
 const BETCASTER_ADDRESS = process.env.NEXT_PUBLIC_BETCASTER_ADDRESS as `0x${string}`;
@@ -50,424 +64,7 @@ const SUPPORTED_ASSETS = [
   { symbol: 'ETH', name: 'Ethereum', icon: '/images/eth.svg' }
 ];
 
-function CountdownTimer({ expiryTime, darkMode, status }: { expiryTime: number, darkMode: boolean, status?: string }) {
-  const [timeLeft, setTimeLeft] = useState<string>("");
-  const [isExpired, setIsExpired] = useState(false);
-
-  const calculateTimeLeft = useCallback(() => {
-    const now = Date.now();
-    const diff = expiryTime - now;
-
-    if (diff <= 0) {
-      setIsExpired(true);
-      return "Resolving";
-    }
-
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-    if (days > 0) {
-      return `${days}d ${hours}h`;
-    } else if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds}s`;
-    } else {
-      return `${seconds}s`;
-    }
-  }, [expiryTime]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [calculateTimeLeft]);
-
-  return (
-    <div className={`flex items-center ${isExpired ? 'text-yellow-500' : darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-      <Clock size={12} className="mr-1" />
-      <span className="text-xs">
-        {status === 'RESOLVED' ? 'Resolved' : isExpired ? 'Resolving' : timeLeft + ' left'}
-      </span>
-    </div>
-  );
-}
-
-interface BetcasterProps {
-  betcasterAddress: `0x${string}`;
-}
-
-// Create a client-side only bottom navigation component
-const BottomNav = dynamic(() => Promise.resolve(({ 
-  isConnected, 
-  address, 
-  chainId, 
-  darkMode, 
-  connectors,
-  connect,
-  switchChain,
-  balanceData,
-  isEthProviderAvailable,
-  connectError,
-  switchError
-}: { 
-  isConnected: boolean;
-  address?: string;
-  chainId?: number;
-  darkMode: boolean;
-  connectors: readonly any[];
-  connect: (args: { connector: any }) => void;
-  switchChain: (args: { chainId: number }) => void;
-  balanceData?: { formatted: string };
-  isEthProviderAvailable: boolean;
-  connectError: Error | null;
-  switchError: Error | null;
-}) => {
-  const [mounted, setMounted] = useState(false);
-  const [showBalance, setShowBalance] = useState(false);
-
-  // Function to format balance to 1 decimal place
-  const formatBalance = (balance: string | undefined) => {
-    if (!balance) return "...";
-    const num = parseFloat(balance);
-    return num.toFixed(1);
-  };
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
-
-  return (
-    <div className={`fixed bottom-0 left-0 right-0 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-t shadow-lg`}>
-      <div className="container mx-auto px-4">
-        {!isEthProviderAvailable && (
-          <div className="text-red-400 font-bold py-2 text-center">
-            Wallet not available. Please open this app inside Warpcast.
-          </div>
-        )}
-
-        <div className="flex items-center justify-between py-2">
-          {/* Feed */}
-          <button className={`flex flex-col items-center p-2 ${
-            darkMode ? 'bg-purple-800 text-white' : 'bg-purple-700 text-white'
-          } rounded transition-colors`}>
-            <Award className="h-6 w-6" />
-            <span className="text-xs mt-1">Feed</span>
-          </button>
-
-          {/* My Bets */}
-          <button 
-            className={`flex flex-col items-center p-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'} cursor-not-allowed`}
-            disabled={true}
-          >
-            <TrendingUp className="h-6 w-6" />
-            <span className="text-xs mt-1">My Bets</span>
-            <span className="text-[10px] opacity-75">Coming Soon</span>
-          </button>
-
-          {/* Leaderboard */}
-          <button 
-            className={`flex flex-col items-center p-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'} cursor-not-allowed`}
-            disabled={true}
-          >
-            <Activity className="h-6 w-6" />
-            <span className="text-xs mt-1">Leaders</span>
-            <span className="text-[10px] opacity-75">Coming Soon</span>
-          </button>
-
-          {/* Wallet Connection */}
-          <div className="flex flex-col items-center relative">
-            {isEthProviderAvailable && !isConnected && (
-          <button 
-                onClick={() => connect({ connector: connectors[0] })}
-                className={`flex flex-col items-center p-2 ${darkMode ? 'text-gray-300 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}
-          >
-              <Globe className="h-6 w-6" />
-                <span className="text-xs mt-1">Connect</span>
-              </button>
-              )}
-
-            {isConnected && chainId !== monadTestnet.id && (
-              <button
-                onClick={() => switchChain({ chainId: monadTestnet.id })}
-                className={`flex flex-col items-center p-2 ${darkMode ? 'text-yellow-300 hover:text-yellow-200' : 'text-yellow-600 hover:text-yellow-700'}`}
-              >
-                <Globe className="h-6 w-6" />
-                <span className="text-xs mt-1">Switch Chain</span>
-              </button>
-            )}
-
-            {isConnected && chainId === monadTestnet.id && (
-              <>
-                <button
-                  onClick={() => setShowBalance(!showBalance)}
-                  className={`flex flex-col items-center p-2 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}
-                >
-                  <Globe className="h-6 w-6" />
-              <div className="flex flex-col items-center">
-                <span className="text-xs mt-1 font-mono">
-                  {address?.slice(0, 4)}...{address?.slice(-4)}
-                </span>
-                    <span className="text-[10px] mt-0.5">Monad</span>
-              </div>
-          </button>
-
-                {/* Floating Balance Display */}
-                {showBalance && (
-                  <div 
-                    className={`absolute bottom-full mb-2 p-2 rounded-lg shadow-lg min-w-[150px] text-center
-                      ${darkMode ? 'bg-gray-700 text-gray-200' : 'bg-white text-gray-700'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}
-                  >
-                    <div className="text-sm font-medium">Balance</div>
-                    <div className="font-mono">
-                      {formatBalance(balanceData?.formatted)} MON
-        </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Error Messages */}
-        {(connectError || switchError) && (
-          <div className="text-xs text-red-400 text-center pb-2">
-            {connectError?.message || "Could not switch chain automatically. Please switch your wallet to Monad Testnet."}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}), { ssr: false });
-
-// Create a client-side only chain switch modal component
-const ChainSwitchModal = dynamic(() => Promise.resolve(({
-  darkMode,
-  chainId,
-  onClose,
-  onSwitch
-}: {
-  darkMode: boolean;
-  chainId?: number;
-  onClose: () => void;
-  onSwitch: () => void;
-}) => {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl p-6 m-4 max-w-sm w-full`}>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className={`text-lg font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-            Switch Network
-          </h3>
-          <button 
-            onClick={onClose}
-            className={`${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-600'}`}
-          >
-            <X size={20} />
-          </button>
-        </div>
-        
-        <div className="mb-6">
-          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
-            Please switch to Monad Testnet to use BetCaster
-          </p>
-          <div className={`flex items-center p-3 rounded-lg mb-4 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-            <div className="flex-1">
-              <div className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                Current Network
-              </div>
-              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                {chainId === 8453 ? 'Base Mainnet' : 'Unknown Network'}
-              </div>
-            </div>
-          </div>
-          <div className={`flex items-center p-3 rounded-lg ${darkMode ? 'bg-purple-900/50' : 'bg-purple-50'}`}>
-            <div className="flex-1">
-              <div className={`font-medium ${darkMode ? 'text-purple-100' : 'text-purple-900'}`}>
-                Required Network
-              </div>
-              <div className={`text-sm ${darkMode ? 'text-purple-300' : 'text-purple-600'}`}>
-                Monad Testnet
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={onSwitch}
-          className={`w-full py-2 px-4 rounded-lg font-medium ${
-            darkMode 
-              ? 'bg-purple-600 hover:bg-purple-500 text-white' 
-              : 'bg-purple-600 hover:bg-purple-700 text-white'
-          }`}
-        >
-          Switch to Monad Testnet
-        </button>
-      </div>
-    </div>
-  );
-}), { ssr: false });
-
-interface PredictionSectionProps {
-  bet: {
-    asset: string;
-    startPrice: number;
-    timestamp: number;
-    predictionType: 'pump' | 'dump';
-    priceThreshold: number;
-    betAmount: number;
-    yay: number;
-    nay: number;
-    expiryTime: number;
-    endPrice?: number;
-    thresholdMet?: boolean;
-  };
-  darkMode: boolean;
-}
-
-// Create a stable prediction section component
-const PredictionSection = React.memo(({ bet, darkMode }: PredictionSectionProps) => {
-  return (
-    <div className="flex items-center justify-between min-h-[48px] transition-all duration-300 ease-in-out">
-      <div className="min-w-[200px] flex justify-end">
-        <BetPriceTracker
-          asset={bet.asset}
-          startPrice={bet.startPrice}
-          startTime={bet.timestamp}
-          isPump={bet.predictionType === 'pump'}
-          priceThreshold={bet.priceThreshold}
-          darkMode={darkMode}
-          resolved={('status' in bet) ? bet.status === 'RESOLVED' : false}
-          endPrice={typeof bet.endPrice === 'number' ? bet.endPrice : undefined}
-          thresholdMet={typeof bet.thresholdMet === 'boolean' ? bet.thresholdMet : undefined}
-        />
-      </div>
-    </div>
-  );
-});
-
-PredictionSection.displayName = 'PredictionSection';
-
-interface BetInfoProps {
-  bet: Bet;
-  darkMode: boolean;
-  betcasterAddress: `0x${string}`;
-  onVoteSuccess: () => void;
-}
-
-// Update the BetInfo component
-const BetInfo = ({ bet, darkMode, betcasterAddress, onVoteSuccess }: BetInfoProps) => {
-  // Type guard function to check if bet has all required properties for PredictionSection
-  const isVerifiedBetWithPrice = (bet: Bet): bet is Bet & {
-    asset: string;
-    startPrice: number;
-    timestamp: number;
-    predictionType: 'pump' | 'dump';
-    priceThreshold: number;
-    betAmount: number;
-    yay: number;
-    nay: number;
-    expiryTime: number;
-  } => {
-    return bet.betType === 'verified' 
-      && typeof bet.asset === 'string'
-      && typeof bet.startPrice === 'number'
-      && typeof bet.timestamp === 'number'
-      && (bet.predictionType === 'pump' || bet.predictionType === 'dump')
-      && typeof bet.priceThreshold === 'number'
-      && typeof bet.betAmount === 'number'
-      && typeof bet.yay === 'number'
-      && typeof bet.nay === 'number'
-      && typeof bet.expiryTime === 'number';
-  };
-
-  if (isVerifiedBetWithPrice(bet)) {
-    return (
-      <div className={`px-4 py-2 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border-t transition-colors duration-200`}>
-        <div className="flex flex-col space-y-2">
-          <div className="flex items-center text-sm">
-            <div className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} transition-colors duration-200`}>
-              <span className="font-medium">{bet.betAmount} MON to vote</span>
-              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${darkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
-                Chainlink Verified
-              </span>
-            </div>
-          </div>
-          
-          <PredictionSection bet={bet} darkMode={darkMode} />
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`px-4 py-2 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border-t transition-colors duration-200`}>
-      <div className="flex items-center text-sm">
-        <div className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} transition-colors duration-200`}>
-          <span className="font-medium">{bet.betAmount} MON to vote</span>
-          <span className="text-xs ml-1">• Community vote</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Add a tooltip component for reusability
-const Tooltip = ({ content, children, darkMode }: { content: string, children: React.ReactNode, darkMode: boolean }) => {
-  return (
-    <div className="relative group">
-      {children}
-      <div className={`absolute z-50 invisible group-hover:visible text-sm rounded-lg py-2 px-3 right-0 mt-2 min-w-[280px] max-w-[320px] shadow-xl
-        ${darkMode ? 'bg-black/90 text-white' : 'bg-white text-gray-900 border border-gray-200'}`}
-      >
-        <div className={`absolute -top-2 right-3 w-4 h-4 transform rotate-45
-          ${darkMode ? 'bg-black/90' : 'bg-white border-l border-t border-gray-200'}`}></div>
-        {content}
-      </div>
-    </div>
-  );
-};
-
-// Add wallet error handler hook
-function useWalletErrorHandler() {
-  const { disconnect } = useDisconnect();
-  return (err: unknown) => {
-    if (
-      typeof err === 'object' &&
-      err !== null &&
-      'message' in err &&
-      typeof (err as any).message === 'string'
-    ) {
-      const message = (err as any).message as string;
-      if (
-        message.includes('getChainId is not a function') ||
-        message.includes('session') ||
-        message.includes('connector')
-      ) {
-        disconnect();
-        alert('Your wallet session expired or is broken. Please reconnect your wallet.');
-        return true;
-      }
-    }
-    return false;
-  };
-}
-
-export default function BetCaster({ betcasterAddress }: BetcasterProps) {
+export default function BetCaster({ betcasterAddress }: { betcasterAddress: `0x${string}` }) {
   const { context, actions, isEthProviderAvailable } = useMiniAppContext() as { context: any, actions: typeof sdk.actions | null, isEthProviderAvailable: boolean };
   const { isConnected, address, chainId } = useAccount();
   const { connect, connectors, error: connectError } = useConnect();
@@ -476,16 +73,18 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
   const { data: balanceData } = useBalance({
     address: address,
   });
-  const [bets, setBets] = useState<Bet[]>([]);
+
+  // Use our custom hooks
+  const { bets, loading, expandedComments, loadBets, listenToCommentsForBet } = useBets(context?.user?.fid?.toString());
+  const { darkMode, setDarkMode } = useUIState();
+  const { isPosting, commentText, setCommentText, handleAddComment } = useComments();
+  const { handleWalletConnect: onWalletConnect, handleChainSwitch: onChainSwitch } = useWallet();
+
+  // State management
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
-  const [darkMode, setDarkMode] = useState(false);
   const [tickerPosition, setTickerPosition] = useState(0);
   const [tickerData, setTickerData] = useState<TickerItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isPosting, setIsPosting] = useState(false);
-  const [isCreatingBet, setIsCreatingBet] = useState(false);
   const [showChainSwitchModal, setShowChainSwitchModal] = useState(false);
   const [isAutoConnecting, setIsAutoConnecting] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -493,22 +92,49 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [isWalletLoading, setIsWalletLoading] = useState(false);
   const [pendingTxHash, setPendingTxHash] = useState<string | null>(null);
-  
-  // Add wallet connection state tracking
   const [walletState, setWalletState] = useState<'disconnected' | 'wrong_chain' | 'connected'>('disconnected');
-  
-  // Form state for create bet modal
   const [newBetContent, setNewBetContent] = useState('');
   const [newBetCategory, setNewBetCategory] = useState('Crypto');
   const [newBetDuration, setNewBetDuration] = useState('24');
-  const [commentText, setCommentText] = useState('');
   const [newBetVoteAmount, setNewBetVoteAmount] = useState<string>('0.1');
   const [selectedAsset, setSelectedAsset] = useState('');
-
-  // Add new state for bet type
   const [betType, setBetType] = useState<'voting' | 'verified'>('voting');
   const [predictionType, setPredictionType] = useState<'pump' | 'dump'>('pump');
-  const [priceThreshold, setPriceThreshold] = useState<number>(5); // 5% default
+  const [priceThreshold, setPriceThreshold] = useState<number>(5);
+  const [pendingBetId, setPendingBetId] = useState<string | null>(null);
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const [authorSearch, setAuthorSearch] = useState('');
+  const [commentsShown, setCommentsShown] = useState<{ [betId: string]: number }>({});
+  const [showReconnectModal, setShowReconnectModal] = useState(false);
+  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
+  const [isCreatingBet, setIsCreatingBet] = useState(false);
+  const commentsUnsubscribeRef = useRef<(() => void) | null>(null);
+
+  // Use the useCreateBet hook for bet creation
+  const createBet = useCreateBet(betcasterAddress);
+
+  // Rename the handlers to avoid conflicts
+  const handleWalletConnect = () => {
+    setIsWalletLoading(true);
+    onWalletConnect().finally(() => setIsWalletLoading(false));
+  };
+
+  const handleChainSwitch = () => {
+    setIsWalletLoading(true);
+    onChainSwitch().finally(() => setIsWalletLoading(false));
+  };
+
+  // Filter bets based on selected filter and search
+  const filteredBets = bets.filter((bet: Bet) => {
+    if (selectedFilter === 'all') return true;
+    if (selectedFilter === 'crypto') return bet.category.toLowerCase() === 'crypto';
+    if (selectedFilter === 'general') return bet.category.toLowerCase() === 'general';
+    if (selectedFilter === 'active') return bet.status !== 'RESOLVED';
+    if (selectedFilter === 'resolved') return bet.status === 'RESOLVED';
+    if (selectedFilter === 'community') return bet.betType === 'voting';
+    return true;
+  }).filter((bet: Bet) => selectedCategory === 'all' || bet.category.toLowerCase() === selectedCategory.toLowerCase())
+    .filter((bet: Bet) => !authorSearch || (bet.author && bet.author.toLowerCase().includes(authorSearch.toLowerCase())));
 
   // Price feed state
   const { price, isLoading: isPriceLoading, error: chainlinkError } = useAssetPrice(
@@ -529,7 +155,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
   useEffect(() => {
     if (isTransactionSuccess) {
       console.log('Transaction successful:', createBetData);
-      handleTransactionSuccess();
+      createBet.handleTransactionSuccess();
     } else if (isWriteError) {
       console.error('Write error:', writeError);
       setIsCreatingBet(false);
@@ -537,222 +163,25 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
     }
   }, [isTransactionSuccess, isWriteError, writeError]);
 
-  // Load bets function for manual refreshes
-  const loadBets = useCallback(async () => {
-    try {
-      setLoading(true);
-      const updatedBets = await betService.getBets(context?.user?.fid?.toString());
-      setBets(updatedBets);
-    } catch (err) {
-      console.error('Failed to load bets:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [context?.user?.fid]);
-
-  // Set up real-time listener
-  useEffect(() => {
-    const unsubscribers: (() => void)[] = [];
-    
-    try {
-      // Set up real-time listener for bets collection
-      const q = query(collection(db, 'bets'), orderBy('timestamp', 'desc'));
-      const betsUnsubscribe = onSnapshot(q, async (snapshot) => {
-        const updatedBets = await Promise.all(snapshot.docs.map(async (doc) => {
-          const bet = { id: doc.id, ...doc.data() } as Bet;
-          
-          // Get user's vote if userId provided
-          if (context?.user?.fid) {
-            const voteQuery = query(
-              collection(db, 'votes'),
-              where('betId', '==', bet.id),
-              where('userId', '==', context.user.fid.toString())
-            );
-            const voteSnapshot = await getDocs(voteQuery);
-            bet.userVote = voteSnapshot.empty ? undefined : (voteSnapshot.docs[0].data().voteType as VoteType);
-          }
-          
-          return bet;
-        }));
-        setBets(updatedBets);
-        setLoading(false);
-      });
-      
-      unsubscribers.push(betsUnsubscribe);
-    } catch (err) {
-      console.error('Failed to set up real-time listener:', err);
-      setLoading(false);
-    }
-
-    return () => unsubscribers.forEach(unsub => unsub());
-  }, [context?.user?.fid]);
-
-  // Add new state for pending betId
-  const [pendingBetId, setPendingBetId] = useState<string | null>(null);
-
-  // Load bets function for manual refreshes
-  const handleTransactionSuccess = async () => {
-    try {
-      const durationHours = parseFloat(newBetDuration);
-      const baseBetData = {
-        author: context?.user?.username || 'anonymous',
-        category: newBetCategory as Category,
-        content: newBetContent.trim(),
-        stakeAmount: 2,
-        betAmount: Number(newBetVoteAmount),
-        timeLeft: newBetDuration,
-        expiryTime: Date.now() + (durationHours * 60 * 60 * 1000),
-        timestamp: Date.now(),
-        status: 'ACTIVE' as const,
-        pfpUrl: context?.user?.pfpUrl,
-        betType: betType
-      };
-
-      if (!pendingBetId) {
-        throw new Error('No pending betId found');
-      }
-
-      // Add additional fields for verified bets
-      const newBet = betType === 'verified' && selectedAsset
-        ? {
-            ...baseBetData,
-            predictionType,
-            priceThreshold,
-            startPrice: price ? parseFloat(price.replace('$', '')) : 0,
-            currentPrice: price ? parseFloat(price.replace('$', '')) : 0,
-            asset: selectedAsset,
-            id: pendingBetId
-          }
-        : {
-            ...baseBetData,
-            id: pendingBetId
-          };
-      
-      await betService.createBet(newBet);
-      setIsCreateModalOpen(false);
-      setNewBetContent('');
-      setBetType('voting');
-      setPredictionType('pump');
-      setPriceThreshold(5);
-      setPendingBetId(null);
-    } catch (err) {
-      console.error('Failed to create bet in Firebase:', err);
-      alert('Failed to save bet details. Please check your bets or try again.'); // More professional error
-    } finally {
-      setIsCreatingBet(false); // Reset creating flag whether success or Firestore error
-      loadBets(); // Refresh bets list after attempting Firestore operation
-    }
-  };
-
-  // Fetch market data
-  useEffect(() => {
-    const fetchMarketData = async () => {
-      try {
-        const crypto = await marketService.getCryptoPrices();
-        setTickerData(crypto);
-      } catch (err) {
-        console.error('Failed to fetch market data:', err);
-      }
-    };
-
-    // Initial fetch
-    fetchMarketData();
-
-    // Refresh every minute
-    const interval = setInterval(fetchMarketData, 60000);
-    return () => clearInterval(interval);
-  }, [marketService, setTickerData]);
-  
-  // Animate ticker
-  useEffect(() => {
-    const tickerInterval = setInterval(() => {
-      setTickerPosition((prev: number) => (prev - 1) % -1000); // Loop the ticker
-    }, 30);
-    
-    return () => clearInterval(tickerInterval);
-  }, []);
-
   // Check user's preferred color scheme on initial load
   useEffect(() => {
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     setDarkMode(prefersDark);
   }, []);
-  
-  const [expandedComments, setExpandedComments] = useState<{ [betId: string]: Comment[] }>({});
-
-  // Fetch comments for a bet when expanded (real-time)
-  const listenToCommentsForBet = useCallback((betId: string) => {
-    const commentsQuery = query(
-      collection(db, 'comments'),
-      where('betId', '==', String(betId)),
-      orderBy('timestamp', 'desc')
-    );
-    const unsubscribe = onSnapshot(commentsQuery, (commentsSnapshot) => {
-      const comments = commentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Comment[];
-      setExpandedComments(prev => ({ ...prev, [betId]: comments }));
-    });
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    if (expandedPostId) {
-      const unsubscribe = listenToCommentsForBet(expandedPostId);
-      return () => unsubscribe();
-    }
-  }, [expandedPostId, listenToCommentsForBet]);
 
   const togglePostExpand = (postId: string) => {
     if (expandedPostId === postId) {
       setExpandedPostId(null);
+      if (commentsUnsubscribeRef.current) {
+        commentsUnsubscribeRef.current();
+        commentsUnsubscribeRef.current = null;
+      }
     } else {
       setExpandedPostId(postId);
-      // No need to manually fetch, real-time listener will handle
-    }
-  };
-  
-  // Update selectedFilter state and filteredBets logic to handle all filters
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  // Add state for author search
-  const [authorSearch, setAuthorSearch] = useState('');
-  // Update filteredBets logic to include author search
-  const filteredBets = bets.filter(bet => {
-    if (selectedFilter === 'all') return true;
-    if (selectedFilter === 'crypto') return bet.category.toLowerCase() === 'crypto';
-    if (selectedFilter === 'general') return bet.category.toLowerCase() === 'general';
-    if (selectedFilter === 'active') return bet.status !== 'RESOLVED';
-    if (selectedFilter === 'resolved') return bet.status === 'RESOLVED';
-    if (selectedFilter === 'community') return bet.betType === 'voting';
-    return true;
-  }).filter(bet => selectedCategory === 'all' || bet.category.toLowerCase() === selectedCategory.toLowerCase())
-    .filter(bet => !authorSearch || (bet.author && bet.author.toLowerCase().includes(authorSearch.toLowerCase())));
-
-  // Update comment handling to show loading state
-  const handleAddComment = async (betId: string) => {
-    if (!commentText.trim()) return;
-    if (!context?.user?.fid) {
-      alert('Please log in to comment');
-      return;
-    }
-    
-    setIsPosting(true);
-    try {
-      const comment: Omit<Comment, 'id' | 'timestamp'> & { betId: string } = {
-        betId,
-        author: context.user.username || 'anonymous',
-        content: commentText.trim(),
-        pfpUrl: context.user.pfpUrl
-      };
-      
-      await betService.addComment(comment);
-      setCommentText('');
-      
-      // Refresh bets to show new comment
-      const updatedBets = await betService.getBets(context.user.fid.toString());
-      setBets(updatedBets);
-    } catch (err) {
-      console.error('Failed to add comment:', err);
-    } finally {
-      setIsPosting(false);
+      if (commentsUnsubscribeRef.current) {
+        commentsUnsubscribeRef.current();
+      }
+      commentsUnsubscribeRef.current = listenToCommentsForBet(postId);
     }
   };
   
@@ -767,258 +196,12 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
     }
   }, [isConnected, chainId]);
 
-  // Handle wallet connection
-  const handleWalletConnect = async () => {
-    setIsWalletLoading(true);
-    try {
-      if (connectors && connectors.length > 0 && connectors[0]?.id === 'farcasterFrame') {
-        await connect({ connector: connectors[0] });
-      } else {
-        alert('No valid wallet connector found. Please reload the app.');
-      }
-    } catch (err) {
-      if (!handleWalletError(err)) {
-        console.error('Wallet connection failed:', err);
-        alert('Failed to connect wallet. Please try again.');
-      }
-    } finally {
-      setIsWalletLoading(false);
-    }
-  };
-
-  // Handle chain switch
-  const handleChainSwitch = async () => {
-    setIsWalletLoading(true);
-    try {
-      await switchChain({ chainId: monadTestnet.id });
-    } catch (err) {
-      console.error('Chain switch failed:', err);
-      alert('Failed to switch chain. Please try manually in your wallet.');
-    } finally {
-      setIsWalletLoading(false);
-    }
-  };
-
-  // Wallet Modal Component
-  const WalletModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl p-6 m-4 max-w-sm w-full`}>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className={`text-lg font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-            {walletState === 'disconnected' ? 'Connect Wallet' : 'Switch Network'}
-          </h3>
-          <button 
-            onClick={() => setShowWalletModal(false)}
-            className={`${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-600'}`}
-          >
-            <X size={20} />
-          </button>
-        </div>
-        
-        <div className="mb-6">
-          {walletState === 'disconnected' ? (
-            <>
-              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
-                Please connect your wallet to use BetCaster
-              </p>
-              <button
-                onClick={handleWalletConnect}
-                disabled={isWalletLoading}
-                className={`w-full py-2 px-4 rounded-lg font-medium ${
-                  darkMode 
-                    ? 'bg-purple-600 hover:bg-purple-500 text-white' 
-                    : 'bg-purple-600 hover:bg-purple-700 text-white'
-                } ${isWalletLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {isWalletLoading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
-                    Connecting...
-                  </div>
-                ) : (
-                  'Connect Wallet'
-                )}
-              </button>
-            </>
-          ) : (
-            <>
-              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
-                Please switch to Monad Testnet to use BetCaster
-              </p>
-              <div className={`flex items-center p-3 rounded-lg mb-4 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                <div className="flex-1">
-                  <div className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                    Current Network
-                  </div>
-                  <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {chainId ? `Chain ID: ${chainId}` : 'Unknown Network'}
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={handleChainSwitch}
-                disabled={isWalletLoading}
-                className={`w-full py-2 px-4 rounded-lg font-medium ${
-                  darkMode 
-                    ? 'bg-purple-600 hover:bg-purple-500 text-white' 
-                    : 'bg-purple-600 hover:bg-purple-700 text-white'
-                } ${isWalletLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {isWalletLoading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
-                    Switching...
-                  </div>
-                ) : (
-                  'Switch to Monad Testnet'
-                )}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  // Update the handleCreateBet function to check wallet state
-  const handleCreateBet = async () => {
-    if (!context?.user?.fid) {
-      alert('Please log in to create a bet');
-      return;
-    }
-
-    if (!newBetContent.trim()) return;
-
-    // Check wallet state before proceeding
-    if (walletState === 'disconnected') {
-      setShowWalletModal(true);
-      return;
-    }
-
-    if (walletState === 'wrong_chain') {
-      setShowWalletModal(true);
-      return;
-    }
-    
-    if (!betcasterAddress) {
-      console.error('Contract address is undefined');
-      alert('Contract address is not configured');
-      return;
-    }
-
-    if (!newBetVoteAmount || isNaN(Number(newBetVoteAmount)) || Number(newBetVoteAmount) < MIN_VOTE_STAKE) {
-      alert(`Vote stake less than ${MIN_VOTE_STAKE} MON will fail. Please enter at least ${MIN_VOTE_STAKE} MON.`);
-      return;
-    }
-
-    setIsCreatingBet(true);
-    try {
-      const durationHours = parseFloat(newBetDuration);
-      const durationSeconds = Math.round(durationHours * 60 * 60);
-      const betId = `${context.user.fid}-${Date.now()}`; // Unique bet ID
-      setPendingBetId(betId);
-
-      let gasLimit;
-      try {
-        gasLimit = BigInt(500000);
-      } catch {
-        gasLimit = undefined;
-      }
-      const params = {
-        address: betcasterAddress as `0x${string}`,
-        abi: betcasterABI,
-        functionName: 'createBet',
-        value: parseEther('3'), // ✅ Correct!
-        args: [
-          betId,
-          parseEther(newBetVoteAmount), // voteStake
-          BigInt(durationSeconds), // duration in seconds
-          betType === 'verified', // isVerified
-          selectedAsset || '', // asset (empty string for non-verified bets)
-          BigInt(priceThreshold), // priceThreshold (whole number percent)
-          predictionType === 'pump' // isPump
-        ],
-        gas: BigInt(500000) // Add manual gas limit as bigint
-      } as const;
-
-      console.log('Creating bet on-chain with betId:', betId);
-      console.log('createBet contract args:', params.args);
-      console.log('createBet contract params:', params);
-
-      // Call contract function
-      const hash = await writeContractAsync(params);
-      console.log('Transaction hash:', hash);
-      if (!hash || typeof hash !== 'string') {
-        setShowReconnectModal(true);
-        setIsCreatingBet(false);
-        return;
-      }
-      setPendingTxHash(hash); // Wait for confirmation before Firestore creation
-      // REMOVE: Immediately close modal and reset state
-      // REMOVE: setIsCreateModalOpen(false);
-      // REMOVE: setIsCreatingBet(false); // This will be handled by handleTransactionSuccess or its caller
-      // REMOVE: setNewBetContent('');
-      // REMOVE: setBetType('voting');
-      // REMOVE: setPredictionType('pump');
-      // REMOVE: setPriceThreshold(5);
-      // REMOVE: setPendingBetId(null); // CRITICAL: Keep pendingBetId until Firestore creation
-      // REMOVE: loadBets();
-
-    } catch (err) {
-      console.error('Failed to create bet:', err);
-      alert('Failed to create bet: ' + (err instanceof Error ? err.message : JSON.stringify(err)));
-      setIsCreatingBet(false);
-    }
-  };
-
-  // Update the Wallet button in the navigation
-  const WalletButton = () => {
-    if (walletState === 'disconnected') {
-      return (
-        <button
-          onClick={() => setShowWalletModal(true)}
-          className={`flex flex-col items-center p-2 ${darkMode ? 'text-gray-300 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}
-        >
-          <Globe className="h-6 w-6" />
-          <span className="text-xs mt-1">Connect</span>
-        </button>
-      );
-    }
-
-    if (walletState === 'wrong_chain') {
-      return (
-        <button
-          onClick={() => setShowWalletModal(true)}
-          className={`flex flex-col items-center p-2 text-yellow-500 hover:text-yellow-400`}
-        >
-          <Globe className="h-6 w-6" />
-          <span className="text-xs mt-1">Switch Chain</span>
-        </button>
-      );
-    }
-
-    return (
-      <button
-        onClick={() => setShowWalletModal(true)}
-        className={`flex flex-col items-center p-2 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}
-      >
-        <Globe className="h-6 w-6" />
-        <div className="flex flex-col items-center">
-          <span className="text-xs mt-1 font-mono">
-            {address?.slice(0, 4)}...{address?.slice(-4)}
-          </span>
-          <span className="text-[10px] mt-0.5">Monad</span>
-        </div>
-      </button>
-    );
-  };
-
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
 
   const handleNewBetVoteAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewBetVoteAmount(e.target.value);
+    createBet.setNewBetVoteAmount(e.target.value);
   };
 
   // Simple auto-connect effect matching sample code
@@ -1032,127 +215,22 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
     setMounted(true);
   }, []);
 
-  // In the BetCaster component, add state to track how many comments to show per bet
-  const [commentsShown, setCommentsShown] = useState<{ [betId: string]: number }>({});
+  // Wrapper for setNewBetCategory to match expected prop type
+  const handleSetNewBetCategory = (cat: string) => {
+    createBet.setNewBetCategory(cat as any); // Cast to Category
+  };
 
-  const handleWalletError = useWalletErrorHandler();
-
-  const [showReconnectModal, setShowReconnectModal] = useState(false);
-
-  // Add a modal for reconnecting the wallet
-  const ReconnectWalletModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl p-6 m-4 max-w-sm w-full`}>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className={`text-lg font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Wallet Session Expired</h3>
-          <button 
-            onClick={() => setShowReconnectModal(false)}
-            className={`${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-600'}`}
-          >
-            <X size={20} />
-          </button>
-        </div>
-        <div className="mb-6">
-          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
-            Your wallet session expired or failed to send the transaction. Please reconnect your wallet to continue.
-          </p>
-          <button
-            onClick={async () => {
-              disconnect();
-              setShowReconnectModal(false);
-              setTimeout(() => handleWalletConnect(), 100); // Prompt wallet connect after disconnect
-            }}
-            className={`w-full py-2 px-4 rounded-lg font-medium ${
-              darkMode 
-                ? 'bg-purple-600 hover:bg-purple-500 text-white' 
-                : 'bg-purple-600 hover:bg-purple-700 text-white'
-            }`}
-          >
-            Reconnect Wallet
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Add transaction receipt hook for robust confirmation
-  const { isSuccess: isTxConfirmed } = useWaitForTransactionReceipt({ hash: pendingTxHash as `0x${string}` | undefined });
-
+  // Optionally, clean up on unmount
   useEffect(() => {
-    if (isTxConfirmed && pendingTxHash) {
-      handleTransactionSuccess();
-      // REMOVE: Redundant state resets, handled by handleTransactionSuccess
-      // REMOVE: setIsCreateModalOpen(false);
-      // REMOVE: setIsCreatingBet(false);
-      // REMOVE: setNewBetContent('');
-      // REMOVE: setBetType('voting');
-      // REMOVE: setPredictionType('pump');
-      // REMOVE: setPriceThreshold(5);
-      // REMOVE: loadBets(); 
-      setPendingTxHash(null); // Clear pending transaction hash after handling
-    }
-  }, [isTxConfirmed, pendingTxHash, handleTransactionSuccess]); // Added handleTransactionSuccess to dependency array
-
-  // Add state for hot bets
-  const [hotBets, setHotBets] = useState<Bet[]>([]);
-
-  // Fetch hot bets (top 10 by yay, then lowest nay, then recent)
-  useEffect(() => {
-    async function fetchHotBets() {
-      try {
-        const allBets = await betService.getBets();
-        const filtered = allBets.filter(b => (b.yay > 0 || b.nay > 0));
-        filtered.sort((a, b) => {
-          if (b.yay !== a.yay) return b.yay - a.yay;
-          if (a.nay !== b.nay) return a.nay - b.nay;
-          return b.timestamp - a.timestamp;
-        });
-        setHotBets(filtered.slice(0, 10));
-      } catch (err) {
-        // fail silently
+    return () => {
+      if (commentsUnsubscribeRef.current) {
+        commentsUnsubscribeRef.current();
       }
-    }
-    fetchHotBets();
+    };
   }, []);
 
-  // HotBetCard component
-  function HotBetCard({ bet, darkMode }: { bet: Bet, darkMode: boolean }) {
-    const totalVotes = bet.yay + bet.nay;
-    const yayPct = totalVotes > 0 ? Math.round((bet.yay / totalVotes) * 100) : 0;
-    const nayPct = 100 - yayPct;
-    return (
-      <div className={`flex flex-col min-w-[220px] max-w-[240px] rounded-xl shadow-lg mx-2 p-4 border-2 ${darkMode ? 'bg-purple-950 border-purple-700' : 'bg-white border-purple-300'} relative overflow-hidden`} style={{ boxShadow: darkMode ? '0 2px 16px 0 #a855f7' : '0 2px 16px 0 #c084fc' }}>
-        <div className="flex items-center mb-2">
-          <Flame className="text-orange-500 mr-2" size={20} />
-          <span className={`font-bold text-sm ${darkMode ? 'text-orange-200' : 'text-orange-600'}`}>Hot</span>
-        </div>
-        <div className={`font-semibold text-base mb-2 ${darkMode ? 'text-white' : 'text-purple-900'}`}>{bet.content.length > 60 ? bet.content.slice(0, 57) + '...' : bet.content}</div>
-        <div className="flex items-center mb-2">
-          {bet.pfpUrl ? (
-            <img src={bet.pfpUrl} alt={bet.author} className="h-7 w-7 rounded-full object-cover mr-2" />
-          ) : (
-            <div className={`h-7 w-7 rounded-full flex items-center justify-center font-bold mr-2 ${darkMode ? 'bg-purple-300 text-purple-900' : 'bg-purple-200 text-purple-700'}`}>{bet.author.charAt(0).toUpperCase()}</div>
-          )}
-          <span className={`text-xs font-medium ${darkMode ? 'text-purple-200' : 'text-purple-700'}`}>{bet.author}</span>
-        </div>
-        <div className="flex items-center mb-2">
-          <span className={`text-xs font-semibold ${darkMode ? 'text-green-300' : 'text-green-600'}`}>Yay: {bet.yay}</span>
-          <span className={`mx-2 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>|</span>
-          <span className={`text-xs font-semibold ${darkMode ? 'text-red-300' : 'text-red-600'}`}>Nay: {bet.nay}</span>
-        </div>
-        <div className="w-full h-3 bg-purple-100 dark:bg-purple-900 rounded-full overflow-hidden mb-1">
-          <div className="h-full bg-gradient-to-r from-pink-500 via-purple-500 to-orange-400" style={{ width: yayPct + '%' }}></div>
-        </div>
-        <div className="flex justify-between text-xs font-semibold">
-          <span className={darkMode ? 'text-green-300' : 'text-green-600'}>{yayPct}% Yay</span>
-          <span className={darkMode ? 'text-red-300' : 'text-red-600'}>{nayPct}% Nay</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className={`flex flex-col min-h-screen ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-800'} transition-colors duration-200`}>
+    <div className={`flex flex-col min-h-screen w-full max-w-md mx-auto ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-800'} transition-colors duration-200`}>
       {/* Header */}
       <header className={`sticky top-0 z-10 ${darkMode ? 'bg-purple-900' : 'bg-purple-700'} text-white shadow-md transition-colors duration-200`}>
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
@@ -1289,19 +367,20 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                   </div>
                 </div>
                 {/* Post Content */}
-                <div className="px-4 py-3 flex items-center">
+                <div className="px-4 py-3 flex items-center relative">
+                  {/* Threshold percentage badge at top right */}
+                  {bet.betType === 'verified' && bet.predictionType && typeof bet.priceThreshold === 'number' && (
+                    <span className={
+                      `absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-semibold ` +
+                      (bet.predictionType === 'pump'
+                        ? (darkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-700')
+                        : (darkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-700'))
+                    }>
+                      {bet.predictionType === 'pump' ? '+' : '-'}{bet.priceThreshold}%
+                    </span>
+                  )}
                   <p className={`${darkMode ? 'text-gray-100' : 'text-gray-800'} text-lg font-medium transition-colors duration-200 mr-2`}>{bet.content}</p>
                   <div className="flex flex-col items-end ml-auto">
-                    {bet.betType === 'verified' && bet.predictionType && typeof bet.priceThreshold === 'number' && (
-                      <span className={
-                        `mb-1 px-2 py-0.5 rounded-full text-xs font-semibold ` +
-                        (bet.predictionType === 'pump'
-                          ? (darkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-700')
-                          : (darkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-700'))
-                      }>
-                        {bet.predictionType === 'pump' ? '+' : '-'}{bet.priceThreshold}%
-                      </span>
-                    )}
                     {/* Share button below threshold badge */}
                     <button
                       onClick={async () => {
@@ -1336,6 +415,8 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
                       yayCount={bet.yay}
                       nayCount={bet.nay}
                       isResolved={bet.status === 'RESOLVED'}
+                      predictionType={bet.betType === 'verified' ? bet.predictionType : undefined}
+                      disableVoting={bet.status !== 'RESOLVED' && bet.expiryTime - Date.now() < 60000}
                     />
                   </div>
                   {/* Comments button */}
@@ -1457,351 +538,61 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
 
       {/* Create Bet Modal */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className={`${darkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-800'} rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[90vh]`}>
-            {/* Modal Header - Fixed */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold">Create New Bet</h2>
-              <button 
-                className={`${darkMode ? 'text-gray-300 hover:text-gray-100' : 'text-gray-500 hover:text-gray-700'} transition-colors duration-200`}
-                onClick={() => setIsCreateModalOpen(false)}
-              >
-                <X size={20} />
-              </button>
-              </div>
-            </div>
-            
-            {/* Modal Content - Scrollable */}
-            <div className="flex-1 overflow-y-auto p-6">
-            <div className="space-y-4">
-              {/* Category Selection */}
-              <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Category</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {mockCategories.map(category => (
-                    <button
-                      key={category.id}
-                      type="button"
-                      className={`px-4 py-2 border rounded-md text-sm flex items-center justify-center transition-colors duration-200 ${
-                        newBetCategory === category.name
-                          ? darkMode ? 'border-purple-500 bg-purple-900 text-purple-300' : 'border-purple-500 bg-purple-50 text-purple-700'
-                          : darkMode ? 'border-gray-600 hover:bg-gray-700 text-gray-300' : 'border-gray-300 hover:bg-gray-50 text-gray-700'
-                      }`}
-                      onClick={() => setNewBetCategory(category.name)}
-                    >
-                      <span className="mr-1">{category.icon}</span>
-                      {category.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Bet Content */}
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 transition-colors duration-200`}>What's your prediction?</label>
-                <textarea
-                  className={`w-full px-3 py-2 border rounded-md ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-700'} transition-colors duration-200`}
-                  rows={3}
-                  value={newBetContent}
-                  onChange={(e) => setNewBetContent(e.target.value)}
-                  placeholder="Share your prediction..."
-                ></textarea>
-              </div>
-              
-                {/* Fixed Platform Stake Display */}
-              <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 transition-colors duration-200`}>Platform Stake</label>
-                  <div className={`w-full px-3 py-2 border rounded-md ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-700'} transition-colors duration-200`}>
-                    3 MON (Fixed)
-                  </div>
-                  <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1 transition-colors duration-200`}>
-                    Required platform stake to create a bet. This ensures quality predictions.
-                  </p>
-              </div>
-              
-                {/* Vote Stake Amount Input */}
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 transition-colors duration-200`}>Vote Stake Amount (MON)</label>
-                  <input
-                    type="number"
-                    className={`w-full px-3 py-2 border rounded-md ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-700'} transition-colors duration-200`}
-                    value={newBetVoteAmount}
-                    onChange={handleNewBetVoteAmountChange}
-                    min={MIN_VOTE_STAKE}
-                    step="0.1"
-                  />
-                  <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1 transition-colors duration-200`}>
-                    Amount each voter must stake to participate (minimum {MIN_VOTE_STAKE} MON). Winners split the total pool.
-                  </p>
-                </div>
-              
-              {/* Duration */}
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 transition-colors duration-200`}>Duration</label>
-                <select 
-                  className={`w-full px-3 py-2 border rounded-md ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-700'} transition-colors duration-200`}
-                  value={newBetDuration}
-                  onChange={(e) => setNewBetDuration(e.target.value)}
-                >
-                  <option value="">Select duration...</option>
-                  <option value="0.0833">5 minutes</option>
-                  <option value="0.1667">10 minutes</option>
-                  <option value="0.5">30 minutes</option>
-                  <option value="1">1 hour</option>
-                  <option value="4">4 hours</option>
-                  <option value="12">12 hours</option>
-                  <option value="24">24 hours</option>
-                  <option value="48">48 hours</option>
-                  <option value="72">72 hours</option>
-                  <option value="168">7 days</option>
-                  <option value="336">14 days</option>
-                  <option value="720">30 days</option>
-                </select>
-              </div>
-              
-                {/* Bet Type Selection */}
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 transition-colors duration-200`}>Bet Type</label>
-                  <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                      className={`px-4 py-2 border rounded-md text-sm flex items-center justify-center transition-colors duration-200 ${
-                        betType === 'voting'
-                          ? darkMode ? 'border-purple-500 bg-purple-900 text-purple-300' : 'border-purple-500 bg-purple-50 text-purple-700'
-                          : darkMode ? 'border-gray-600 hover:bg-gray-700 text-gray-300' : 'border-gray-300 hover:bg-gray-50 text-gray-700'
-                      }`}
-                      onClick={() => setBetType('voting')}
-                    >
-                      Community Vote
-                    </button>
-                    <button
-                      type="button"
-                      className={`px-4 py-2 border rounded-md text-sm flex items-center justify-center transition-colors duration-200 ${
-                        betType === 'verified'
-                          ? darkMode ? 'border-purple-500 bg-purple-900 text-purple-300' : 'border-purple-500 bg-purple-50 text-purple-700'
-                          : darkMode ? 'border-gray-600 hover:bg-gray-700 text-gray-300' : 'border-gray-300 hover:bg-gray-50 text-gray-700'
-                      }`}
-                      onClick={() => setBetType('verified')}
-                    >
-                      Price Verified
-                </button>
-              </div>
-                  <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1 transition-colors duration-200`}>
-                    {betType === 'voting' 
-                      ? 'Winners determined by majority vote'
-                      : 'Winners determined by actual price movement via Chainlink'
-                    }
-                  </p>
-            </div>
-                
-                {/* Show additional options for verified bets */}
-                {betType === 'verified' && (
-                  <>
-                    {/* Info about how Yay/Nay wins for verified bets */}
-                    <div className={`mb-4 p-3 rounded-md ${darkMode ? 'bg-blue-900/40 text-blue-200 border border-blue-800' : 'bg-blue-50 text-blue-800 border border-blue-200'}`}> 
-                      <div className="font-semibold mb-1">How winners are determined:</div>
-                      <ul className="list-disc pl-5 text-sm">
-                        <li><b>Yay</b> wins if the price moves by at least the threshold in the predicted direction (pump/dump).</li>
-                        <li><b>Nay</b> wins if the threshold is <b>not</b> met (i.e., the price does not move enough).</li>
-                        <li>If the price moves in the wrong direction or not enough, <b>Nay</b> wins.</li>
-                        <li>There are no refunds for verified bets unless the market is invalid.</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-                        Select Asset
-                      </label>
-                      <div className="grid grid-cols-3 gap-3">
-                        {SUPPORTED_ASSETS.map((asset) => (
-                          <button
-                            key={asset.symbol}
-                            type="button"
-                            onClick={() => setSelectedAsset(asset.symbol)}
-                            className={`relative flex flex-col items-center p-4 rounded-lg border transition-all duration-200 ${
-                              selectedAsset === asset.symbol
-                                ? darkMode
-                                  ? 'border-purple-500 bg-purple-900/50 shadow-lg shadow-purple-500/20'
-                                  : 'border-purple-500 bg-purple-50 shadow-lg shadow-purple-500/20'
-                                : darkMode
-                                  ? 'border-gray-700 bg-gray-800 hover:border-gray-600'
-                                  : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                          >
-                            <div className="relative w-8 h-8 mb-2">
-                              <Image
-                                src={asset.icon}
-                                alt={asset.name}
-                                fill
-                                className="object-contain"
-                              />
-          </div>
-                            <span className={`text-sm font-medium ${
-                              selectedAsset === asset.symbol
-                                ? darkMode ? 'text-purple-300' : 'text-purple-700'
-                                : darkMode ? 'text-gray-300' : 'text-gray-700'
-                            }`}>
-                              {asset.symbol}
-                            </span>
-                            <span className={`text-xs ${
-                              darkMode ? 'text-gray-400' : 'text-gray-500'
-                            }`}>
-                              {asset.name}
-                            </span>
-                            {selectedAsset === asset.symbol && (
-                              <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full ${
-                                darkMode ? 'bg-purple-500' : 'bg-purple-600'
-                              } flex items-center justify-center`}>
-                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                              </div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-
-                      {selectedAsset && (
-                        <div className={`mt-4 p-4 rounded-lg ${
-                          darkMode ? 'bg-gray-700/50' : 'bg-gray-50'
-                        }`}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <div className="relative w-6 h-6">
-                                <Image
-                                  src={SUPPORTED_ASSETS.find(a => a.symbol === selectedAsset)?.icon || ''}
-                                  alt={selectedAsset}
-                                  fill
-                                  className="object-contain"
-                                />
-                              </div>
-                              <span className={`font-medium ${
-                                darkMode ? 'text-gray-200' : 'text-gray-700'
-                              }`}>
-                                Current Price:
-                              </span>
-                            </div>
-                            {isPriceLoading ? (
-                              <div className="flex items-center space-x-2">
-                                <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                                <span className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                  Loading...
-                                </span>
-                              </div>
-                            ) : chainlinkError ? (
-                              <span className="text-red-500 text-sm">{chainlinkError}</span>
-                            ) : (
-                              <span className={`font-mono font-medium ${
-                                darkMode ? 'text-gray-200' : 'text-gray-800'
-                              }`}>
-                                {price}
-                              </span>
-                            )}
-                          </div>
-                          <p className={`mt-2 text-xs ${
-                            darkMode ? 'text-gray-400' : 'text-gray-500'
-                          }`}>
-                            Price feed provided by Chainlink Oracle
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 transition-colors duration-200`}>Price Movement</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          className={`px-4 py-2 border rounded-md text-sm flex items-center justify-center transition-colors duration-200 ${
-                            predictionType === 'pump'
-                              ? darkMode ? 'border-green-500 bg-green-900 text-green-300' : 'border-green-500 bg-green-50 text-green-700'
-                              : darkMode ? 'border-gray-600 hover:bg-gray-700 text-gray-300' : 'border-gray-300 hover:bg-gray-50 text-gray-700'
-                          }`}
-                          onClick={() => setPredictionType('pump')}
-                        >
-                          Will Pump
-                        </button>
-                <button
-                  type="button"
-                          className={`px-4 py-2 border rounded-md text-sm flex items-center justify-center transition-colors duration-200 ${
-                            predictionType === 'dump'
-                              ? darkMode ? 'border-red-500 bg-red-900 text-red-300' : 'border-red-500 bg-red-50 text-red-700'
-                              : darkMode ? 'border-gray-600 hover:bg-gray-700 text-gray-300' : 'border-gray-300 hover:bg-gray-50 text-gray-700'
-                          }`}
-                          onClick={() => setPredictionType('dump')}
-                >
-                          Will Dump
-                </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 transition-colors duration-200`}>Price Change Threshold</label>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="range"
-                          min="1"
-                          max="20"
-                          step="1"
-                          value={priceThreshold}
-                          onChange={(e) => setPriceThreshold(parseInt(e.target.value, 10))}
-                          className="flex-1"
-                        />
-                        <span className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{priceThreshold}%</span>
-                      </div>
-                      <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1 transition-colors duration-200`}>
-                        Price must move by at least this percentage to be considered a pump/dump
-                      </p>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Modal Footer - Fixed */}
-            <div className="p-6 border-t border-gray-200 dark:border-gray-700">
-              <button
-                type="button"
-                disabled={isCreatingBet || isTransactionPending}
-                className={`w-full ${
-                  darkMode 
-                    ? (isCreatingBet || isTransactionPending) ? 'bg-purple-800' : 'bg-purple-700 hover:bg-purple-600' 
-                    : (isCreatingBet || isTransactionPending) ? 'bg-purple-700' : 'bg-purple-600 hover:bg-purple-700'
-                } text-white py-2 px-4 rounded-md font-medium transition-colors duration-200 disabled:opacity-50 flex items-center justify-center`}
-                onClick={handleCreateBet}
-              >
-                {isCreatingBet ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                    <span>Waiting for wallet...</span>
-                  </div>
-                ) : isTransactionPending ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                    <span>Confirming transaction...</span>
-                  </div>
-                ) : isWriteError ? (
-                  <div className="flex items-center space-x-2 text-red-300">
-                    <span>Failed - Click to retry</span>
-                  </div>
-                ) : (
-                  'Create Bet (3 MON stake)'
-                )}
-              </button>
-
-              {/* betCreated state is not used in the current implementation */}
-            </div>
-          </div>
-        </div>
+        <CreateBetModal
+          darkMode={darkMode}
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          isCreatingBet={createBet.isCreatingBet}
+          isTransactionPending={createBet.isTransactionPending}
+          isWriteError={createBet.isWriteError}
+          isFirestorePending={createBet.isFirestorePending}
+          handleCreateBet={createBet.handleCreateBet}
+          newBetContent={createBet.newBetContent}
+          setNewBetContent={createBet.setNewBetContent}
+          newBetCategory={createBet.newBetCategory}
+          setNewBetCategory={handleSetNewBetCategory}
+          newBetDuration={createBet.newBetDuration}
+          setNewBetDuration={createBet.setNewBetDuration}
+          newBetVoteAmount={createBet.newBetVoteAmount}
+          setNewBetVoteAmount={createBet.setNewBetVoteAmount}
+          betType={createBet.betType}
+          setBetType={createBet.setBetType}
+          selectedAsset={createBet.selectedAsset}
+          setSelectedAsset={createBet.setSelectedAsset}
+          predictionType={createBet.predictionType}
+          setPredictionType={createBet.setPredictionType}
+          priceThreshold={createBet.priceThreshold}
+          setPriceThreshold={createBet.setPriceThreshold}
+          mockCategories={mockCategories}
+          SUPPORTED_ASSETS={SUPPORTED_ASSETS}
+          handleNewBetVoteAmountChange={handleNewBetVoteAmountChange}
+          MIN_VOTE_STAKE={MIN_VOTE_STAKE}
+        />
       )}
 
-      {/* Add the WalletModal */}
-      {showWalletModal && <WalletModal />}
+      {showWalletModal && (
+        <WalletModal 
+          darkMode={darkMode}
+          onClose={() => setShowWalletModal(false)}
+          walletState={walletState}
+          chainId={chainId}
+          isWalletLoading={isWalletLoading}
+          onConnect={handleWalletConnect}
+          onSwitch={handleChainSwitch}
+        />
+      )}
       
-      {/* Update the wallet button in navigation */}
-      <WalletButton />
-
-      {showReconnectModal && <ReconnectWalletModal />}
+      {showReconnectModal && (
+        <ReconnectWalletModal 
+          darkMode={darkMode}
+          onClose={() => setShowReconnectModal(false)}
+          onReconnect={() => {
+            disconnect();
+            setShowReconnectModal(false);
+            setTimeout(() => handleWalletConnect(), 100);
+          }}
+        />
+      )}
     </div>
   );
 } 

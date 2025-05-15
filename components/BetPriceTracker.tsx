@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAssetPrice } from '../hooks/useAssetPrice';
+import toast from 'react-hot-toast';
 
 interface BetPriceTrackerProps {
   asset: string;
@@ -77,7 +78,7 @@ export default function BetPriceTracker({
 
   // Toast handler for spinner click
   const handleSpinnerClick = () => {
-    window.alert('Fetching new price every 15 seconds.');
+    toast('Fetching new price every 15 seconds.');
   };
 
   // Base container styles that maintain consistent height
@@ -185,7 +186,7 @@ export default function BetPriceTracker({
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Current Price:</span>
-            <span className={`font-mono font-medium text-right w-32 ${darkMode ? 'text-gray-200' : 'text-gray-800'} ${blink === 'green' ? 'animate-blink-green' : blink === 'red' ? 'animate-blink-red' : ''}`}>
+            <span className={`font-mono font-medium text-right w-32 ${darkMode ? 'text-gray-200' : 'text-gray-800'} ${blink ? 'animate-blink-bg' : ''}`}>
               {currentPriceStr || '-'}
             </span>
           </div>
@@ -200,4 +201,15 @@ export default function BetPriceTracker({
       </div>
     </div>
   );
-} 
+}
+
+/* Add this to the bottom of the file or in your global CSS */
+/*
+.animate-blink-bg {
+  animation: blink-bg 0.5s;
+}
+@keyframes blink-bg {
+  0% { background-color: #facc15; }
+  100% { background-color: transparent; }
+}
+*/ 

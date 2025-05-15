@@ -1,101 +1,53 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { betService } from '../services/betService';
-import { marketService } from '../services/marketService';
-import { Bet, TickerItem } from '../types/bet';
-import { useMiniAppContext } from '../../hooks/use-miniapp-context';
+import { db } from '../../lib/firebase/config';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { Bet, Comment } from '../types/bet';
 
-export function useBets() {
-  const { context } = useMiniAppContext();
+export function useBets(userFid?: string) {
   const [bets, setBets] = useState<Bet[]>([]);
-  const [tickerData, setTickerData] = useState<TickerItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [expandedComments, setExpandedComments] = useState<{ [betId: string]: Comment[] }>({});
 
-  // Load bets
-  useEffect(() => {
-    loadBets();
-    loadMarketData();
-    
-    // Refresh market data every minute
-    const marketInterval = setInterval(loadMarketData, 60000);
-    return () => clearInterval(marketInterval);
-  }, [context?.user?.fid, loadBets, loadMarketData]);
-
-  async function loadBets() {
+  const loadBets = useCallback(async () => {
     try {
       setLoading(true);
-      const fetchedBets = await betService.getBets(context?.user?.fid?.toString());
-      setBets(fetchedBets);
+      const loadedBets = await betService.getBets();
+      setBets(loadedBets);
     } catch (err) {
-      setError('Failed to load bets');
-      console.error(err);
+      console.error('Failed to load bets:', err);
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  async function loadMarketData() {
-    try {
-      const crypto = await marketService.getCryptoPrices();
-      setTickerData(crypto);
-    } catch (err) {
-      console.error('Failed to load market data:', err);
-    }
-  }
+  const listenToCommentsForBet = useCallback((betId: string) => {
+    const commentsQuery = query(
+      collection(db, 'comments'),
+      where('betId', '==', betId),
+      orderBy('timestamp', 'desc')
+    );
 
-  async function createBet(bet: Omit<Bet, 'id' | 'comments' | 'yay' | 'nay' | 'userVote' | 'commentCount'>) {
-    try {
-      const id = `${context?.user?.fid || 'anon'}-${Date.now()}`;
-      await betService.createBet({ ...bet, id });
-      await loadBets();
-    } catch (err) {
-      setError('Failed to create bet');
-      console.error(err);
-    }
-  }
-
-  async function voteBet(betId: string, voteType: 'yay' | 'nay') {
-    if (!context?.user?.fid) {
-      setError('Must be logged in to vote');
-      return;
-    }
-
-    try {
-      await betService.voteBet(betId, context.user.fid.toString(), voteType);
-      await loadBets();
-    } catch (err) {
-      setError('Failed to vote on bet');
-      console.error(err);
-    }
-  }
-
-  async function addComment(betId: string, content: string) {
-    if (!context?.user?.fid) {
-      setError('Must be logged in to comment');
-      return;
-    }
-
-    try {
-      await betService.addComment({
-        betId,
-        author: context.user.username || 'anonymous',
-        content,
+    const unsubscribe = onSnapshot(commentsQuery, (snapshot) => {
+      const comments: Comment[] = [];
+      snapshot.forEach((doc) => {
+        comments.push({ id: doc.id, ...doc.data() } as Comment);
       });
-      await loadBets();
-    } catch (err) {
-      setError('Failed to add comment');
-      console.error(err);
-    }
-  }
+      setExpandedComments(prev => ({ ...prev, [betId]: comments }));
+    });
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    loadBets();
+  }, [loadBets]);
 
   return {
     bets,
-    tickerData,
     loading,
-    error,
-    createBet,
-    voteBet,
-    addComment,
-    refreshBets: loadBets,
+    expandedComments,
+    loadBets,
+    listenToCommentsForBet
   };
 } 

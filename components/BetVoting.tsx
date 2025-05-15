@@ -6,6 +6,7 @@ import { betService } from '../lib/services/betService';
 import BetcasterArtifact from '../artifacts/contracts/Betcaster.sol/Betcaster.json';
 import { ethers } from 'ethers';
 import { writeContract } from 'wagmi/actions';
+import toast from 'react-hot-toast';
 
 // Add FallbackProvider setup for multiple RPCs
 const MONAD_RPC_URLS = [
@@ -41,6 +42,8 @@ interface BetVotingProps {
   yayCount?: number;
   nayCount?: number;
   isResolved?: boolean;
+  predictionType?: 'pump' | 'dump';
+  disableVoting?: boolean;
 }
 
 // Helper: fetch claimable prize (estimate, not on-chain call)
@@ -50,7 +53,7 @@ function getClaimAmount(voteStake: number, yayCount: number, nayCount: number, y
   return ((yayCount + nayCount) * voteStake) / totalWinners;
 }
 
-export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSuccess, userVote, yayCount = 0, nayCount = 0, isResolved = false }: BetVotingProps) {
+export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSuccess, userVote, yayCount = 0, nayCount = 0, isResolved = false, predictionType, disableVoting = false }: BetVotingProps) {
   const [isVoting, setIsVoting] = useState(false);
   const [lastVoteType, setLastVoteType] = useState<'yay' | 'nay' | null>(null);
   const [currentTxHash, setCurrentTxHash] = useState<`0x${string}` | undefined>(undefined);
@@ -79,7 +82,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
           await betService.voteBet(betId, context?.user?.fid.toString() || '', lastVoteType);
           onVoteSuccess?.();
         } catch (err) {
-          alert('Vote confirmed on blockchain but failed to update in database. Please refresh.');
+          toast.error('Vote confirmed on blockchain but failed to update in database. Please refresh.');
         } finally {
           setIsVoting(false);
           setLastVoteType(null);
@@ -89,7 +92,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
         setIsVoting(false);
         setLastVoteType(null);
         setCurrentTxHash(undefined);
-        alert('Transaction failed: ' + (transactionError instanceof Error ? transactionError.message : 'Unknown error'));
+        toast.error('Transaction failed: ' + (transactionError instanceof Error ? transactionError.message : 'Unknown error'));
       }
     };
 
@@ -110,23 +113,23 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
 
   const handleVote = async (isYay: boolean) => {
     if (!context?.user?.fid) {
-      alert('Please connect your Farcaster account to vote');
+      toast.error('Please connect your Farcaster account to vote');
       return;
     }
 
     if (!chainId) {
-      alert('Please connect your wallet');
+      toast.error('Please connect your wallet');
       return;
     }
 
     if (!address) {
-      alert('Please connect your wallet');
+      toast.error('Please connect your wallet');
       return;
     }
 
     // Validate vote stake amount
     if (voteStake < MIN_VOTE_STAKE) {
-      alert(`Minimum stake required is ${MIN_VOTE_STAKE} MON`);
+      toast.error(`Minimum stake required is ${MIN_VOTE_STAKE} MON`);
       return;
     }
 
@@ -159,15 +162,15 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
       
       if (err instanceof Error) {
         if (err.message.includes('insufficient funds')) {
-          alert('Insufficient MON balance');
+          toast.error('Insufficient MON balance');
         } else if (err.message.includes('user rejected') || err.message.includes('user denied')) {
-          // Don't show any alert for user rejections
+          // Don't show any toast for user rejections
           return;
         } else {
-          alert('Failed to place vote. Please try again');
+          toast.error('Failed to place vote. Please try again');
         }
       } else {
-        alert('Failed to place vote. Please try again');
+        toast.error('Failed to place vote. Please try again');
       }
     }
   };
@@ -244,20 +247,20 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
         setHasClaimed(claimed);
         onVoteSuccess?.();
         setShowClaimModal(false);
-        alert('Prize claimed successfully!');
+        toast.success('Prize claimed successfully!');
       }, 3000);
     } catch (e) {
       if (e instanceof Error) {
         if (e.message.includes('insufficient funds')) {
-          alert('Insufficient MON for gas fees');
+          toast.error('Insufficient MON for gas fees');
         } else if (e.message.includes('user rejected') || e.message.includes('user denied')) {
-          // Don't show any alert for user rejections
+          // Don't show any toast for user rejections
           return;
         } else {
-          alert('Failed to claim prize. Please try again');
+          toast.error('Failed to claim prize. Please try again');
         }
       } else {
-        alert('Failed to claim prize. Please try again');
+        toast.error('Failed to claim prize. Please try again');
       }
       setShowClaimModal(false);
     } finally {
@@ -266,23 +269,47 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
   };
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 items-center">
       <button
-        className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-50${userVote || isResolved ? ' opacity-50 cursor-not-allowed' : ''}`}
+        className={`bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm font-medium disabled:opacity-50${userVote || isResolved || disableVoting ? ' opacity-50 cursor-not-allowed' : ''}`}
         onClick={() => handleVote(true)}
-        disabled={isVoting || isTransactionPending || !!userVote || isResolved}
+        disabled={isVoting || isTransactionPending || !!userVote || isResolved || disableVoting}
       >
-        {userVote === 'yay' && <span className="mr-1">✓</span>}
-        {isVoting && lastVoteType === 'yay' ? 'Waiting for wallet...' : isTransactionPending && lastVoteType === 'yay' ? 'Confirming...' : `Yay (${yayCount})`}
+        {(isVoting && lastVoteType === 'yay') || (isTransactionPending && lastVoteType === 'yay') ? (
+          <span className="mr-2">
+            <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin align-middle"></span>
+          </span>
+        ) : null}
+        <span className="inline-flex items-center">
+          {userVote === 'yay' && <span className="mr-1">✓</span>}
+          {`Yay (${yayCount})`}
+        </span>
       </button>
       <button
-        className={`bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md disabled:opacity-50${userVote || isResolved ? ' opacity-50 cursor-not-allowed' : ''}`}
+        className={`bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium disabled:opacity-50${userVote || isResolved || disableVoting ? ' opacity-50 cursor-not-allowed' : ''}`}
         onClick={() => handleVote(false)}
-        disabled={isVoting || isTransactionPending || !!userVote || isResolved}
+        disabled={isVoting || isTransactionPending || !!userVote || isResolved || disableVoting}
       >
-        {userVote === 'nay' && <span className="mr-1">✓</span>}
-        {isVoting && lastVoteType === 'nay' ? 'Waiting for wallet...' : isTransactionPending && lastVoteType === 'nay' ? 'Confirming...' : `Nay (${nayCount})`}
+        {(isVoting && lastVoteType === 'nay') || (isTransactionPending && lastVoteType === 'nay') ? (
+          <span className="mr-2">
+            <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin align-middle"></span>
+          </span>
+        ) : null}
+        <span className="inline-flex items-center">
+          {userVote === 'nay' && <span className="mr-1">✓</span>}
+          {`Nay (${nayCount})`}
+        </span>
       </button>
+      {/* Pump/Dump Arrow Only Tag */}
+      {predictionType && (
+        <span className={`flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${predictionType === 'pump' ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'} ml-2`}>
+          {predictionType === 'pump' ? (
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5m0 0l-7 7m7-7l7 7" /></svg>
+          ) : (
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m0 0l-7-7m7 7l7-7" /></svg>
+          )}
+        </span>
+      )}
       {/* Claim Prize Button (small, under user's vote) */}
       {canClaim && !hasClaimed && (
         <button

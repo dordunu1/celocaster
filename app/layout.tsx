@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { FrameProvider } from "@/components/farcaster-provider";
+import { Toaster } from 'react-hot-toast';
 
 import "./globals.css";
 
@@ -23,8 +24,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
       <body className={inter.className}>
-        <FrameProvider>{children}</FrameProvider>
+        <FrameProvider>
+          {children}
+          <Toaster position="top-right" />
+        </FrameProvider>
       </body>
     </html>
   );

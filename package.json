@@ -25,6 +25,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-feather": "^2.0.10",
+    "react-hot-toast": "^2.5.2",
     "viem": "^2.22.22",
     "wagmi": "^2.14.12",
     "zod": "^3.24.1"
