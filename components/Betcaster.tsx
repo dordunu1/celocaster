@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Clock, Award, MessageSquare, ThumbsUp, ThumbsDown, ChevronUp, ChevronDown, Edit3, TrendingUp, Activity, Globe, X, Moon, Sun, Info, User, Share2 } from 'lucide-react';
+import { Clock, Award, MessageSquare, ThumbsUp, ThumbsDown, ChevronUp, ChevronDown, Edit3, TrendingUp, Activity, Globe, X, Moon, Sun, Info, User, Share2, Flame } from 'lucide-react';
 import { useMiniAppContext } from '../hooks/use-miniapp-context';
 import sdk from '@farcaster/frame-sdk';
 import { marketService } from '../lib/services/marketService';
@@ -21,6 +21,7 @@ import { parseEther } from 'viem';
 import BetVoting from './BetVoting';
 import betcasterArtifact from '../artifacts/contracts/Betcaster.sol/Betcaster.json';
 const betcasterABI = betcasterArtifact.abi;
+import HotBetsRow from './HotBetsRow';
 
 // Add contract address from app/page.tsx
 const BETCASTER_ADDRESS = process.env.NEXT_PUBLIC_BETCASTER_ADDRESS as `0x${string}`;
@@ -1092,6 +1093,64 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
     }
   }, [isTxConfirmed, pendingTxHash, handleTransactionSuccess]); // Added handleTransactionSuccess to dependency array
 
+  // Add state for hot bets
+  const [hotBets, setHotBets] = useState<Bet[]>([]);
+
+  // Fetch hot bets (top 10 by yay, then lowest nay, then recent)
+  useEffect(() => {
+    async function fetchHotBets() {
+      try {
+        const allBets = await betService.getBets();
+        const filtered = allBets.filter(b => (b.yay > 0 || b.nay > 0));
+        filtered.sort((a, b) => {
+          if (b.yay !== a.yay) return b.yay - a.yay;
+          if (a.nay !== b.nay) return a.nay - b.nay;
+          return b.timestamp - a.timestamp;
+        });
+        setHotBets(filtered.slice(0, 10));
+      } catch (err) {
+        // fail silently
+      }
+    }
+    fetchHotBets();
+  }, []);
+
+  // HotBetCard component
+  function HotBetCard({ bet, darkMode }: { bet: Bet, darkMode: boolean }) {
+    const totalVotes = bet.yay + bet.nay;
+    const yayPct = totalVotes > 0 ? Math.round((bet.yay / totalVotes) * 100) : 0;
+    const nayPct = 100 - yayPct;
+    return (
+      <div className={`flex flex-col min-w-[220px] max-w-[240px] rounded-xl shadow-lg mx-2 p-4 border-2 ${darkMode ? 'bg-purple-950 border-purple-700' : 'bg-white border-purple-300'} relative overflow-hidden`} style={{ boxShadow: darkMode ? '0 2px 16px 0 #a855f7' : '0 2px 16px 0 #c084fc' }}>
+        <div className="flex items-center mb-2">
+          <Flame className="text-orange-500 mr-2" size={20} />
+          <span className={`font-bold text-sm ${darkMode ? 'text-orange-200' : 'text-orange-600'}`}>Hot</span>
+        </div>
+        <div className={`font-semibold text-base mb-2 ${darkMode ? 'text-white' : 'text-purple-900'}`}>{bet.content.length > 60 ? bet.content.slice(0, 57) + '...' : bet.content}</div>
+        <div className="flex items-center mb-2">
+          {bet.pfpUrl ? (
+            <img src={bet.pfpUrl} alt={bet.author} className="h-7 w-7 rounded-full object-cover mr-2" />
+          ) : (
+            <div className={`h-7 w-7 rounded-full flex items-center justify-center font-bold mr-2 ${darkMode ? 'bg-purple-300 text-purple-900' : 'bg-purple-200 text-purple-700'}`}>{bet.author.charAt(0).toUpperCase()}</div>
+          )}
+          <span className={`text-xs font-medium ${darkMode ? 'text-purple-200' : 'text-purple-700'}`}>{bet.author}</span>
+        </div>
+        <div className="flex items-center mb-2">
+          <span className={`text-xs font-semibold ${darkMode ? 'text-green-300' : 'text-green-600'}`}>Yay: {bet.yay}</span>
+          <span className={`mx-2 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>|</span>
+          <span className={`text-xs font-semibold ${darkMode ? 'text-red-300' : 'text-red-600'}`}>Nay: {bet.nay}</span>
+        </div>
+        <div className="w-full h-3 bg-purple-100 dark:bg-purple-900 rounded-full overflow-hidden mb-1">
+          <div className="h-full bg-gradient-to-r from-pink-500 via-purple-500 to-orange-400" style={{ width: yayPct + '%' }}></div>
+        </div>
+        <div className="flex justify-between text-xs font-semibold">
+          <span className={darkMode ? 'text-green-300' : 'text-green-600'}>{yayPct}% Yay</span>
+          <span className={darkMode ? 'text-red-300' : 'text-red-600'}>{nayPct}% Nay</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`flex flex-col min-h-screen ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-800'} transition-colors duration-200`}>
       {/* Header */}
@@ -1119,28 +1178,8 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
         </div>
       </header>
 
-      {/* Ticker */}
-      <div className={`overflow-hidden ${darkMode ? 'bg-gray-800 text-gray-100 border-gray-700' : 'bg-white text-gray-800 border-gray-200'} border-b py-2 transition-colors duration-200`}>
-        <div 
-          className="whitespace-nowrap inline-block transition-transform" 
-          style={{ transform: `translateX(${tickerPosition}px)` }}
-        >
-          {tickerData.length > 0 ? (
-            Array(3).fill(tickerData).flat().map((item, index) => (
-              <TickerItem
-              key={`${item.symbol}-${index}`} 
-                symbol={item.symbol}
-                price={item.price}
-                darkMode={darkMode}
-              />
-            ))
-          ) : (
-            <span className={`inline-flex items-center mx-6 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              Loading market data...
-              </span>
-          )}
-        </div>
-      </div>
+      {/* Hot Bets Row (compact chips) */}
+      <HotBetsRow darkMode={darkMode} />
 
       {/* Unified filter bar: All, Crypto, General, Active, Resolved, Community Vote */}
       <div className="container mx-auto px-4 pt-4 pb-4">
