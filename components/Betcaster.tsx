@@ -711,6 +711,9 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
   
   // Update selectedFilter state and filteredBets logic to handle all filters
   const [selectedFilter, setSelectedFilter] = useState('all');
+  // Add state for author search
+  const [authorSearch, setAuthorSearch] = useState('');
+  // Update filteredBets logic to include author search
   const filteredBets = bets.filter(bet => {
     if (selectedFilter === 'all') return true;
     if (selectedFilter === 'crypto') return bet.category.toLowerCase() === 'crypto';
@@ -719,7 +722,8 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
     if (selectedFilter === 'resolved') return bet.status === 'RESOLVED';
     if (selectedFilter === 'community') return bet.betType === 'voting';
     return true;
-  }).filter(bet => selectedCategory === 'all' || bet.category.toLowerCase() === selectedCategory.toLowerCase());
+  }).filter(bet => selectedCategory === 'all' || bet.category.toLowerCase() === selectedCategory.toLowerCase())
+    .filter(bet => !authorSearch || (bet.author && bet.author.toLowerCase().includes(authorSearch.toLowerCase())));
 
   // Update comment handling to show loading state
   const handleAddComment = async (betId: string) => {
@@ -772,7 +776,7 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
         alert('No valid wallet connector found. Please reload the app.');
       }
     } catch (err) {
-      if (!useWalletErrorHandler()(err)) {
+      if (!handleWalletError(err)) {
         console.error('Wallet connection failed:', err);
         alert('Failed to connect wallet. Please try again.');
       }
@@ -1147,6 +1151,15 @@ export default function BetCaster({ betcasterAddress }: BetcasterProps) {
           >
             All
           </button>
+          {/* Author search bar */}
+          <input
+            type="text"
+            value={authorSearch}
+            onChange={e => setAuthorSearch(e.target.value)}
+            placeholder="Search author..."
+            className={`px-3 py-2 rounded-full text-sm border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-100 placeholder-gray-400' : 'bg-white border-gray-300 text-gray-700 placeholder-gray-400'}`}
+            style={{ minWidth: 160, maxWidth: 220 }}
+          />
           <button
             className={`px-4 py-2 rounded-full text-sm font-medium flex items-center transition-colors ${selectedFilter === 'crypto' ? (darkMode ? 'bg-purple-800 text-white' : 'bg-purple-700 text-white') : (darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')}`}
             onClick={() => setSelectedFilter('crypto')}
