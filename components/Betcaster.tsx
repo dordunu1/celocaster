@@ -75,7 +75,7 @@ export default function BetCaster({ betcasterAddress }: { betcasterAddress: `0x$
   });
 
   // Use our custom hooks
-  const { bets, loading, expandedComments, loadBets, listenToCommentsForBet } = useBets(context?.user?.fid?.toString());
+  const { bets, loading, expandedComments, loadBets, listenToCommentsForBet, updateSingleBet } = useBets(context?.user?.fid?.toString());
   const { darkMode, setDarkMode } = useUIState();
   const { isPosting, commentText, setCommentText, handleAddComment } = useComments();
   const { handleWalletConnect: onWalletConnect, handleChainSwitch: onChainSwitch } = useWallet();
@@ -411,6 +411,7 @@ export default function BetCaster({ betcasterAddress }: { betcasterAddress: `0x$
                       voteStake={bet.betAmount}
                       betcasterAddress={betcasterAddress}
                       onVoteSuccess={loadBets}
+                      updateSingleBet={updateSingleBet}
                       userVote={bet.userVote}
                       yayCount={bet.yay}
                       nayCount={bet.nay}

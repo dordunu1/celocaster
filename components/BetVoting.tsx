@@ -44,6 +44,7 @@ interface BetVotingProps {
   isResolved?: boolean;
   predictionType?: 'pump' | 'dump';
   disableVoting?: boolean;
+  updateSingleBet?: (betId: string) => Promise<void>;
 }
 
 // Helper: fetch claimable prize (estimate, not on-chain call)
@@ -53,7 +54,7 @@ function getClaimAmount(voteStake: number, yayCount: number, nayCount: number, y
   return ((yayCount + nayCount) * voteStake) / totalWinners;
 }
 
-export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSuccess, userVote, yayCount = 0, nayCount = 0, isResolved = false, predictionType, disableVoting = false }: BetVotingProps) {
+export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSuccess, userVote, yayCount = 0, nayCount = 0, isResolved = false, predictionType, disableVoting = false, updateSingleBet }: BetVotingProps) {
   const [isVoting, setIsVoting] = useState(false);
   const [lastVoteType, setLastVoteType] = useState<'yay' | 'nay' | null>(null);
   const [currentTxHash, setCurrentTxHash] = useState<`0x${string}` | undefined>(undefined);
@@ -80,7 +81,12 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
         try {
           // Update Firebase after blockchain transaction is confirmed
           await betService.voteBet(betId, context?.user?.fid.toString() || '', lastVoteType);
-          onVoteSuccess?.();
+          // Update only this bet instead of reloading all bets
+          if (updateSingleBet) {
+            await updateSingleBet(betId);
+          } else {
+            onVoteSuccess?.();
+          }
         } catch (err) {
           toast.error('Vote confirmed on blockchain but failed to update in database. Please refresh.');
         } finally {
@@ -104,6 +110,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
     betId,
     context?.user?.fid,
     onVoteSuccess,
+    updateSingleBet,
     transactionError,
     setIsVoting,
     setLastVoteType,

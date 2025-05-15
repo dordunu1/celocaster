@@ -10,7 +10,8 @@ import {
   orderBy, 
   increment,
   writeBatch,
-  setDoc
+  setDoc,
+  getDoc
 } from 'firebase/firestore';
 import { Bet, Comment, VoteType } from '../types/bet';
 
@@ -31,6 +32,40 @@ export const betService = {
       status: 'ACTIVE',
     });
     return betId;
+  },
+
+  // Get a single bet by ID
+  async getBet(betId: string, userId?: string): Promise<Bet | null> {
+    const betDoc = await getDoc(doc(db, BETS_COLLECTION, betId));
+    if (!betDoc.exists()) return null;
+    
+    const bet = { id: betDoc.id, ...betDoc.data() } as Bet;
+    
+    // Get user's vote if userId provided
+    if (userId) {
+      const voteQuery = query(
+        collection(db, VOTES_COLLECTION),
+        where('betId', '==', betId),
+        where('userId', '==', userId)
+      );
+      const voteSnapshot = await getDocs(voteQuery);
+      bet.userVote = voteSnapshot.empty ? undefined : (voteSnapshot.docs[0].data().voteType as VoteType);
+    }
+
+    // Get comments for this bet
+    const commentsQuery = query(
+      collection(db, COMMENTS_COLLECTION),
+      where('betId', '==', String(betId)),
+      orderBy('timestamp', 'desc')
+    );
+    const commentsSnapshot = await getDocs(commentsQuery);
+    bet.comments = commentsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }) as Comment);
+    if (!Array.isArray(bet.comments)) bet.comments = [];
+    
+    return bet;
   },
 
   // Get all bets

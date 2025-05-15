@@ -9,6 +9,20 @@ export function useBets(userId?: string) {
   const [loading, setLoading] = useState(true);
   const [expandedComments, setExpandedComments] = useState<{ [betId: string]: Comment[] }>({});
 
+  // Update a single bet in the state
+  const updateSingleBet = useCallback(async (betId: string) => {
+    try {
+      const updatedBet = await betService.getBet(betId);
+      if (updatedBet) {
+        setBets(prevBets => 
+          prevBets.map(bet => bet.id === betId ? updatedBet : bet)
+        );
+      }
+    } catch (err) {
+      console.error('Failed to update single bet:', err);
+    }
+  }, []);
+
   // Load bets function for manual refreshes
   const loadBets = useCallback(async () => {
     try {
@@ -78,6 +92,7 @@ export function useBets(userId?: string) {
     loading,
     expandedComments,
     loadBets,
+    updateSingleBet,
     listenToCommentsForBet
   };
 } 
