@@ -1,7 +1,7 @@
 {
   "subtitle": "Decentralized Prediction Markets on Celo",
   "description": "Join the future of decentralized betting! Create and participate in prediction markets for crypto prices and community events. Powered by Celo blockchain, experience transparent, secure, and fair markets where your predictions can turn into rewards.",
-  "ogTitle": "BetCaster",
+  "ogTitle": "CeloCaster",
   "ogDescription": "Predict, bet, and win! The easiest way to create and join decentralized prediction markets—price-based or community-voted—on Celo.",
   "ogImageUrl": "https://celocaster.netlify.app/images/feed.png",
   "tagline": "Predict. Bet. Win. Together.",
@@ -9,11 +9,11 @@
   "accountAssociation": {
     "header": "eyJmaWQiOjI2NTAwOCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweGUwOGRkODY5MzU1ZDUyMjE0NDg5M2RiNkFkQ2Y2ZDU3NzdFZTQ2OTgifQ",
     "payload": "eyJkb21haW4iOiJjZWxvY2FzdGVyLm5ldGxpZnkuYXBwIn0",
-    "signature": "MHg4Y2M1M2I4MGUyYjQ5MjM1OGZlYTU0MDUyNGUxZDViMjVmNzkzNTYzNTdhMWNmZjYxZDM4MjQ5OWVmNDI4N2NiMGQ4YTg2MTNkYTZlYTM3YWY2MzFkZmU4NTUxMzNmMjFkNmJhYjc3MzQxYjg1NmNiYmYxNzIyMGNlOTc4NTkwMDFi"
+    "signature": "MHhkZDBmYzMwZmU4ZjMxZmM2YTM5MTEyYzkyMzc4MzZlN2ZhOTNjZmYyNDg2OTc3OTBiMDVlMjI5ZmRmMzMxODEwM2U4YTAzN2E0MjI1ZDFhMDQwNzU3ZGUwMGViYzBkMzFiMjUzMmMyM2E0MzQ0ZDhkNzMyNWNhZjk3NDE5ZWJkZjFi"
   },
   "frame": {
     "version": "1",
-    "name": "BetCaster",
+    "name": "CeloCaster",
     "iconUrl": "https://celocaster.netlify.app/images/icon.png",
     "homeUrl": "https://celocaster.netlify.app",
     "imageUrl": "https://celocaster.netlify.app/images/feed.png",
