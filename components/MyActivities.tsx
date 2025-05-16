@@ -121,19 +121,19 @@ function EarningsTab({ myVotes, darkMode }: { myVotes: any[]; darkMode: boolean 
               <b>Winnings (Profit) Formula:</b><br />
               <span className="font-mono">Profit = (S / W) × L</span><br />
               Where:<br />
-              <span className="ml-2">S = your stake (MON)</span><br />
-              <span className="ml-2">W = total staked on winning side (MON)</span><br />
-              <span className="ml-2">L = total staked on losing side (MON)</span>
+              <span className="ml-2">S = your stake (CELO)</span><br />
+              <span className="ml-2">W = total staked on winning side (CELO)</span><br />
+              <span className="ml-2">L = total staked on losing side (CELO)</span>
             </div>
             <div className="mb-2 text-sm">
               <b>Losses:</b> If you lose, you lose your stake (S).
             </div>
             <div className="mb-2 text-sm">
               <b>Example:</b><br />
-              You staked <b>4 MON</b> on the winning side.<br />
-              There were <b>3 winners</b> (total 12 MON) and <b>2 losers</b> (total 8 MON).<br />
-              <span className="font-mono">Profit = (4 / 12) × 8 = 2.67 MON</span><br />
-              Your total payout = <b>6.67 MON</b> (your stake + profit).
+              You staked <b>4 CELO</b> on the winning side.<br />
+              There were <b>3 winners</b> (total 12 CELO) and <b>2 losers</b> (total 8 CELO).<br />
+              <span className="font-mono">Profit = (4 / 12) × 8 = 2.67 CELO</span><br />
+              Your total payout = <b>6.67 CELO</b> (your stake + profit).
             </div>
             <div className="text-xs text-gray-400">Only resolved bets are included in these calculations.</div>
           </div>
@@ -143,7 +143,7 @@ function EarningsTab({ myVotes, darkMode }: { myVotes: any[]; darkMode: boolean 
         <b>Note:</b> Rewards are calculated based on resolved bets you participated in, regardless of whether you have claimed your rewards.
       </div>
       <div className={`mb-4 text-center text-base font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'} max-w-md mx-auto`}>
-        This chart shows your total winnings (profit) and losses across all bets you voted on. Winnings are calculated as your share of the losing side's stake for bets you won. Losses are the total MON you staked on losing bets. Only resolved bets are included.
+        This chart shows your total winnings (profit) and losses across all bets you voted on. Winnings are calculated as your share of the losing side's stake for bets you won. Losses are the total CELO you staked on losing bets. Only resolved bets are included.
       </div>
       <div className="w-full max-w-xs h-64 flex items-center justify-center">
         <ResponsiveContainer width="100%" height="100%">
@@ -162,7 +162,7 @@ function EarningsTab({ myVotes, darkMode }: { myVotes: any[]; darkMode: boolean 
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
-            <RechartsTooltip formatter={(value: any, name: string) => [`${value} MON`, name]} />
+            <RechartsTooltip formatter={(value: any, name: string) => [`${value} CELO`, name]} />
             <Legend />
           </PieChart>
         </ResponsiveContainer>
@@ -172,23 +172,23 @@ function EarningsTab({ myVotes, darkMode }: { myVotes: any[]; darkMode: boolean 
           <tbody>
             <tr>
               <td className="text-gray-400">Total Pool Participated:</td>
-              <td className="font-semibold text-gray-300">{totalPool.toFixed(2)} MON</td>
+              <td className="font-semibold text-gray-300">{totalPool.toFixed(2)} CELO</td>
             </tr>
             <tr>
               <td className="text-gray-400">Total Bets:</td>
               <td className="font-semibold text-gray-300">{totalBets}</td>
             </tr>
             <tr>
-              <td className="text-gray-400">Total MON Staked:</td>
-              <td className="font-semibold text-gray-300">{totalStaked.toFixed(2)} MON</td>
+              <td className="text-gray-400">Total CELO Staked:</td>
+              <td className="font-semibold text-gray-300">{totalStaked.toFixed(2)} CELO</td>
             </tr>
             <tr>
-              <td className="text-green-400">Total Winnings (MON):</td>
-              <td className="font-semibold text-green-300">{totalProfit.toFixed(2)} MON</td>
+              <td className="text-green-400">Total Winnings (CELO):</td>
+              <td className="font-semibold text-green-300">{totalProfit.toFixed(2)} CELO</td>
             </tr>
             <tr>
-              <td className="text-red-400">Total Losses (MON):</td>
-              <td className="font-semibold text-red-300">{totalLoss.toFixed(2)} MON</td>
+              <td className="text-red-400">Total Losses (CELO):</td>
+              <td className="font-semibold text-red-300">{totalLoss.toFixed(2)} CELO</td>
             </tr>
           </tbody>
         </table>
@@ -238,8 +238,8 @@ export default function MyActivities({ darkMode }: MyActivitiesProps) {
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 activeTab === 'bets'
                   ? darkMode
-                    ? 'bg-purple-800 text-white'
-                    : 'bg-purple-700 text-white'
+                    ? 'bg-yellow-500 text-white'
+                    : 'bg-yellow-500 text-white'
                   : darkMode
                   ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
                   : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
@@ -252,8 +252,8 @@ export default function MyActivities({ darkMode }: MyActivitiesProps) {
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 activeTab === 'votes'
                   ? darkMode
-                    ? 'bg-purple-800 text-white'
-                    : 'bg-purple-700 text-white'
+                    ? 'bg-yellow-500 text-white'
+                    : 'bg-yellow-500 text-white'
                   : darkMode
                   ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
                   : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
@@ -266,8 +266,8 @@ export default function MyActivities({ darkMode }: MyActivitiesProps) {
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 activeTab === 'earnings'
                   ? darkMode
-                    ? 'bg-purple-800 text-white'
-                    : 'bg-purple-700 text-white'
+                    ? 'bg-yellow-500 text-white'
+                    : 'bg-yellow-500 text-white'
                   : darkMode
                   ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
                   : 'bg-gray-200 hover:bg-gray-300 text-gray-700'

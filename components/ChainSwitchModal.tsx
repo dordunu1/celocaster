@@ -41,7 +41,7 @@ export default function ChainSwitchModal({
         
         <div className="mb-6">
           <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
-            Please switch to Monad Testnet to use BetCaster
+            Please switch to Celo Mainnet to use BetCaster
           </p>
           <div className={`flex items-center p-3 rounded-lg mb-4 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
             <div className="flex-1">
@@ -49,17 +49,17 @@ export default function ChainSwitchModal({
                 Current Network
               </div>
               <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                {chainId === 8453 ? 'Base Mainnet' : 'Unknown Network'}
+                {chainId === 42220 ? 'Celo Mainnet' : 'Unknown Network'}
               </div>
             </div>
           </div>
-          <div className={`flex items-center p-3 rounded-lg ${darkMode ? 'bg-purple-900/50' : 'bg-purple-50'}`}>
+          <div className={`flex items-center p-3 rounded-lg ${darkMode ? 'bg-yellow-900/50' : 'bg-yellow-100'}`}>
             <div className="flex-1">
-              <div className={`font-medium ${darkMode ? 'text-purple-100' : 'text-purple-900'}`}>
+              <div className={`font-medium ${darkMode ? 'text-yellow-200' : 'text-yellow-800'}`}>
                 Required Network
               </div>
-              <div className={`text-sm ${darkMode ? 'text-purple-300' : 'text-purple-600'}`}>
-                Monad Testnet
+              <div className={`text-sm ${darkMode ? 'text-yellow-200' : 'text-yellow-800'}`}>
+                Celo Mainnet
               </div>
             </div>
           </div>
@@ -69,11 +69,11 @@ export default function ChainSwitchModal({
           onClick={onSwitch}
           className={`w-full py-2 px-4 rounded-lg font-medium ${
             darkMode 
-              ? 'bg-purple-600 hover:bg-purple-500 text-white' 
-              : 'bg-purple-600 hover:bg-purple-700 text-white'
+              ? 'bg-yellow-400 hover:bg-yellow-300 text-black' 
+              : 'bg-yellow-500 hover:bg-yellow-600 text-black'
           }`}
         >
-          Switch to Monad Testnet
+          Switch to Celo Mainnet
         </button>
       </div>
     </div>

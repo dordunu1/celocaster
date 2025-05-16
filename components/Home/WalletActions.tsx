@@ -3,7 +3,7 @@
 import React from 'react';
 import { useMiniAppContext } from "../../hooks/use-miniapp-context";
 import { parseEther } from "viem";
-import { monadTestnet } from "viem/chains";
+import { celo } from "viem/chains";
 import {
   useAccount,
   useConnect,
@@ -75,7 +75,7 @@ export function WalletActions() {
                 {chainId}
               </span>
             </p>
-            {chainId === monadTestnet.id ? (
+            {chainId === celo.id ? (
               <div className="flex flex-col space-y-2 border border-[#333] p-4 rounded-md">
                 <h2 className="text-lg font-semibold text-left">
                   Send Transaction Example
@@ -91,7 +91,7 @@ export function WalletActions() {
                     className="bg-white text-black rounded-md p-2 text-sm"
                     onClick={() =>
                       window.open(
-                        `https://testnet.monadexplorer.com/tx/${hash}`,
+                        `https://celoscan.io/tx/${hash}`,
                         "_blank"
                       )
                     }
@@ -103,9 +103,9 @@ export function WalletActions() {
             ) : (
               <button
                 className="bg-white text-black rounded-md p-2 text-sm"
-                onClick={() => switchChain({ chainId: monadTestnet.id })}
+                onClick={() => switchChain({ chainId: celo.id })}
               >
-                Switch to Monad Testnet
+                Switch to Celo Mainnet
               </button>
             )}
 

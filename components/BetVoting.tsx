@@ -8,22 +8,16 @@ import { ethers } from 'ethers';
 import { writeContract } from 'wagmi/actions';
 import toast from 'react-hot-toast';
 
-// Add FallbackProvider setup for multiple RPCs
-const MONAD_RPC_URLS = [
-  process.env.NEXT_PUBLIC_MONAD_RPC_1,
-  process.env.NEXT_PUBLIC_MONAD_RPC_2,
-  process.env.NEXT_PUBLIC_MONAD_RPC_3,
-  process.env.NEXT_PUBLIC_MONAD_RPC_4,
-  process.env.NEXT_PUBLIC_MONAD_RPC_5,
-  process.env.NEXT_PUBLIC_MONAD_RPC_6,
-  process.env.NEXT_PUBLIC_MONAD_RPC_7,
+// Add FallbackProvider setup for Celo RPCs
+const CELO_RPC_URLS = [
+  process.env.NEXT_PUBLIC_CELO_RPC_1,
 ].filter(Boolean);
 
 function getFallbackProvider() {
-  if (MONAD_RPC_URLS.length === 1) {
-    return new ethers.providers.JsonRpcProvider(MONAD_RPC_URLS[0]);
+  if (CELO_RPC_URLS.length === 1) {
+    return new ethers.providers.JsonRpcProvider(CELO_RPC_URLS[0]);
   }
-  const providers = MONAD_RPC_URLS.map(url => new ethers.providers.JsonRpcProvider(url));
+  const providers = CELO_RPC_URLS.map(url => new ethers.providers.JsonRpcProvider(url));
   return new ethers.providers.FallbackProvider(providers);
 }
 
@@ -31,7 +25,7 @@ function getFallbackProvider() {
 const betcasterABI = BetcasterArtifact.abi;
 
 // Contract constants
-const MIN_VOTE_STAKE = 0.1; // 0.1 MON
+const MIN_VOTE_STAKE = 0.1; // 0.1 CELO
 
 interface BetVotingProps {
   betId: string;
@@ -137,7 +131,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
 
     // Validate vote stake amount
     if (voteStake < MIN_VOTE_STAKE) {
-      toast.error(`Minimum stake required is ${MIN_VOTE_STAKE} MON`);
+      toast.error(`Minimum stake required is ${MIN_VOTE_STAKE} CELO`);
       return;
     }
 
@@ -145,7 +139,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
     setLastVoteType(isYay ? 'yay' : 'nay');
 
     try {
-      // Convert voteStake from MON to wei
+      // Convert voteStake from CELO to wei
       const voteStakeWei = parseEther(voteStake.toString());
 
       // Prepare transaction parameters with proper configuration
@@ -170,7 +164,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
       
       if (err instanceof Error) {
         if (err.message.includes('insufficient funds')) {
-          toast.error('Insufficient MON balance');
+          toast.error('Insufficient CELO balance');
         } else if (err.message.includes('user rejected') || err.message.includes('user denied')) {
           // Don't show any toast for user rejections
           return;
@@ -282,7 +276,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
     } catch (e) {
       if (e instanceof Error) {
         if (e.message.includes('insufficient funds')) {
-          toast.error('Insufficient MON for gas fees');
+          toast.error('Insufficient CELO for gas fees');
         } else if (e.message.includes('user rejected') || e.message.includes('user denied')) {
           // Don't show any toast for user rejections
           return;
@@ -361,7 +355,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-40">
           <div className={`rounded-lg shadow-lg p-6 min-w-[300px] ${darkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-800'}`}> 
             <h3 className="text-lg font-semibold mb-2 text-center">Claim Prize</h3>
-            <p className="text-center mb-4">You will receive <span className="font-bold">{claimAmount.toFixed(4)} MON</span></p>
+            <p className="text-center mb-4">You will receive <span className="font-bold">{claimAmount.toFixed(4)} CELO</span></p>
             <div className="flex justify-center gap-4">
               <button
                 className={`px-4 py-2 rounded-md font-medium flex items-center justify-center transition-colors duration-200 ${

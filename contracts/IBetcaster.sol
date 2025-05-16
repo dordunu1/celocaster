@@ -13,8 +13,8 @@ interface IBetcaster {
     // Structs
     struct BetInfo {
         address creator;
-        uint256 platformStake;    // Fixed 2 MON
-        uint256 voteStake;        // Amount per vote
+        uint256 platformStake;    // Fixed 2 CELO
+        uint256 voteStake;        // Amount per vote (in CELO)
         uint256 expiryTime;
         bool isVerified;          // Whether it uses price verification
         string asset;             // Asset symbol (e.g., "BTC", "ETH", "SOL")

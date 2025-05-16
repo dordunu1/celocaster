@@ -12,6 +12,7 @@ const { ethers } = require("ethers");
 const admin = require("firebase-admin");
 const fs = require("fs");
 const path = require("path");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 
 // Firestore setup
 if (!admin.apps.length) {
@@ -19,10 +20,10 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-// Ethers setup
-const PRIVATE_KEY = functions.config().automation.private_key;
-const RPC_URL = functions.config().automation.rpc_url;
-const CONTRACT_ADDRESS = functions.config().automation.contract_address;
+// Ethers setup (TEMPORARY for first deploy only!)
+const PRIVATE_KEY = process.env.AUTOMATION_PRIVATE_KEY;
+const RPC_URL = process.env.AUTOMATION_RPC_URL;
+const CONTRACT_ADDRESS = process.env.AUTOMATION_CONTRACT_ADDRESS;
 const ABI_PATH = path.join(__dirname, "Betcaster.json");
 const CONTRACT_ABI = JSON.parse(fs.readFileSync(ABI_PATH)).abi;
 
@@ -30,9 +31,7 @@ const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
 const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
 
-exports.resolveBets = functions.pubsub
-  .schedule("every 1 minutes")
-  .onRun(async (context) => {
+exports.resolveBets = onSchedule("every 1 minutes", async (event) => {
     const now = Date.now();
     const betsRef = db.collection("bets");
     const snapshot = await betsRef

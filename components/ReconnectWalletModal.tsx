@@ -29,8 +29,8 @@ const ReconnectWalletModal: React.FC<ReconnectWalletModalProps> = ({ darkMode, o
           onClick={onReconnect}
           className={`w-full py-2 px-4 rounded-lg font-medium ${
             darkMode 
-              ? 'bg-purple-600 hover:bg-purple-500 text-white' 
-              : 'bg-purple-600 hover:bg-purple-700 text-white'
+              ? 'bg-yellow-400 hover:bg-yellow-300 text-black' 
+              : 'bg-yellow-400 hover:bg-yellow-500 text-black'
           }`}
         >
           Reconnect Wallet

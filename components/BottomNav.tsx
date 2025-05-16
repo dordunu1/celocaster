@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Award, TrendingUp, Activity, Globe } from 'lucide-react';
-import { monadTestnet } from 'wagmi/chains';
+import { celo } from 'wagmi/chains';
 
 interface BottomNavProps {
   isConnected: boolean;
@@ -65,8 +65,8 @@ export default function BottomNav({
           <button
             className={`flex flex-col items-center p-2 rounded transition-colors ${
               activePage === 'feed'
-                ? darkMode ? 'bg-purple-800 text-white' : 'bg-purple-700 text-white'
-                : darkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'
+                ? 'bg-yellow-500 text-white'
+                : darkMode ? 'text-gray-400 hover:text-yellow-500' : 'text-gray-600 hover:text-yellow-600'
             }`}
             onClick={() => onNavigate('feed')}
           >
@@ -78,8 +78,8 @@ export default function BottomNav({
           <button
             className={`flex flex-col items-center p-2 rounded transition-colors ${
               activePage === 'activities'
-                ? darkMode ? 'bg-purple-800 text-white' : 'bg-purple-700 text-white'
-                : darkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'
+                ? 'bg-yellow-500 text-white'
+                : darkMode ? 'text-gray-400 hover:text-yellow-500' : 'text-gray-600 hover:text-yellow-600'
             }`}
             onClick={() => onNavigate('activities')}
           >
@@ -102,35 +102,35 @@ export default function BottomNav({
             {isEthProviderAvailable && !isConnected && (
               <button 
                 onClick={() => connect({ connector: connectors[0] })}
-                className={`flex flex-col items-center p-2 ${darkMode ? 'text-gray-300 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}
+                className={`flex flex-col items-center p-2 ${darkMode ? 'text-gray-300 hover:text-yellow-500' : 'text-gray-600 hover:text-yellow-600'}`}
               >
                 <Globe className="h-6 w-6" />
                 <span className="text-xs mt-1">Connect</span>
               </button>
             )}
 
-            {isConnected && chainId !== monadTestnet.id && (
+            {isConnected && chainId !== celo.id && (
               <button
-                onClick={() => switchChain({ chainId: monadTestnet.id })}
-                className={`flex flex-col items-center p-2 ${darkMode ? 'text-yellow-300 hover:text-yellow-200' : 'text-yellow-600 hover:text-yellow-700'}`}
+                onClick={() => switchChain({ chainId: celo.id })}
+                className={`flex flex-col items-center p-2 ${darkMode ? 'text-yellow-500 hover:text-yellow-200' : 'text-yellow-600 hover:text-yellow-700'}`}
               >
                 <Globe className="h-6 w-6" />
                 <span className="text-xs mt-1">Switch Chain</span>
               </button>
             )}
 
-            {isConnected && chainId === monadTestnet.id && (
+            {isConnected && chainId === celo.id && (
               <>
                 <button
                   onClick={() => setShowBalance(!showBalance)}
-                  className={`flex flex-col items-center p-2 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}
+                  className={`flex flex-col items-center p-2 ${darkMode ? 'text-yellow-500' : 'text-yellow-600'}`}
                 >
                   <Globe className="h-6 w-6" />
                   <div className="flex flex-col items-center">
                     <span className="text-xs mt-1 font-mono">
                       {address?.slice(0, 4)}...{address?.slice(-4)}
                     </span>
-                    <span className="text-[10px] mt-0.5">Monad</span>
+                    <span className="text-[10px] mt-0.5">Celo</span>
                   </div>
                 </button>
 
@@ -142,7 +142,7 @@ export default function BottomNav({
                   >
                     <div className="text-sm font-medium">Balance</div>
                     <div className="font-mono">
-                      {formatBalance(balanceData?.formatted)} MON
+                      {formatBalance(balanceData?.formatted)} CELO
                     </div>
                   </div>
                 )}
@@ -154,7 +154,7 @@ export default function BottomNav({
         {/* Error Messages */}
         {(connectError || switchError) && (
           <div className="text-xs text-red-400 text-center pb-2">
-            {connectError?.message || "Could not switch chain automatically. Please switch your wallet to Monad Testnet."}
+            {connectError?.message || "Could not switch chain automatically. Please switch your wallet to Celo Mainnet."}
           </div>
         )}
       </div>

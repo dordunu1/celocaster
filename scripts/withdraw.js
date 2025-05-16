@@ -26,11 +26,11 @@ async function main() {
   const walletAddress = await wallet.getAddress();
   const walletBalance = await provider.getBalance(walletAddress);
   console.log(`Wallet address: ${walletAddress}`);
-  console.log(`Wallet balance: ${ethers.utils.formatEther(walletBalance)} MON`);
+  console.log(`Wallet balance: ${ethers.utils.formatEther(walletBalance)} CELO`);
 
   // Optional: Check contract balance before
   const contractBalance = await provider.getBalance(CONTRACT_ADDRESS);
-  console.log(`Contract balance: ${ethers.utils.formatEther(contractBalance)} MON`);
+  console.log(`Contract balance: ${ethers.utils.formatEther(contractBalance)} CELO`);
 
   // Call withdraw (with manual gas limit)
   const tx = await contract.withdraw({ gasLimit: 500000 });
@@ -42,7 +42,7 @@ async function main() {
 
   // Optional: Check contract balance after
   const newBalance = await provider.getBalance(CONTRACT_ADDRESS);
-  console.log(`New contract balance: ${ethers.utils.formatEther(newBalance)} MON`);
+  console.log(`New contract balance: ${ethers.utils.formatEther(newBalance)} CELO`);
 }
 
 main().catch((err) => {

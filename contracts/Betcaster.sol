@@ -8,8 +8,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Betcaster is IBetcaster, ReentrancyGuard, Ownable {
     // Constants
-    uint256 public constant PLATFORM_STAKE = 3 ether; // 3 MON platform stake
-    uint256 public constant MIN_VOTE_STAKE = 0.1 ether; // 0.1 MON
+    uint256 public constant PLATFORM_STAKE = 3 ether; // 3 CELO platform stake
+    uint256 public constant MIN_VOTE_STAKE = 0.1 ether; // 0.1 CELO
     uint256 public constant MIN_DURATION = 5 minutes;
     uint256 public constant MAX_DURATION = 30 days;
     
@@ -90,7 +90,7 @@ contract Betcaster is IBetcaster, ReentrancyGuard, Ownable {
         uint256 priceThreshold,
         bool isPump
     ) external payable override nonReentrant {
-        require(msg.value == PLATFORM_STAKE, "Must stake 3 MON");
+        require(msg.value == PLATFORM_STAKE, "Must stake 3 CELO");
         require(voteStake >= MIN_VOTE_STAKE, "Vote stake too low");
         require(duration >= MIN_DURATION && duration <= MAX_DURATION, "Invalid duration");
         require(bets[betId].creator == address(0), "Bet already exists");

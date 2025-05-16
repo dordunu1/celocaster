@@ -1,8 +1,8 @@
 {
-  "btcUsdFeed": "0x2Cd9D7E85494F68F5aF08EF96d6FD5e8F71B4d31",
-  "ethUsdFeed": "0x0c76859E85727683Eeba0C70Bc2e0F5781337818",
-  "betcaster": "0xf88880cd035D4475A443210CB1eE850efF698360",
-  "betcasterAutomation": "0xFef6ED4a647E1dE5A03dc2CCf4B0ff82e1755921",
-  "chainId": "10143",
-  "network": "monad-testnet"
+  "btcUsdFeed": "0x128fE88eaa22bFFb868Bb3A584A54C96eE24014b",
+  "ethUsdFeed": "0x1FcD30A73D67639c1cD89ff5746E7585731c083B",
+  "betcaster": "0x5de50FF0A6Ac3B9f6F7beE2e72EcadAa3a718705",
+  "betcasterAutomation": "0xBF098eDe4264fd46Dc2da4b6E87d1dF39271e7C9",
+  "chainId": "42220",
+  "network": "celo-mainnet"
 }

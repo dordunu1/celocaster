@@ -117,7 +117,7 @@ const CreateBetModal: React.FC<CreateBetModalProps> = ({
                     type="button"
                     className={`px-4 py-2 border rounded-md text-sm flex items-center justify-center transition-colors duration-200 ${
                       newBetCategory === category.name
-                        ? darkMode ? 'border-purple-500 bg-purple-900 text-purple-300' : 'border-purple-500 bg-purple-50 text-purple-700'
+                        ? darkMode ? 'border-yellow-400 bg-yellow-900 text-yellow-200' : 'border-yellow-400 bg-yellow-50 text-yellow-800'
                         : darkMode ? 'border-gray-600 hover:bg-gray-700 text-gray-300' : 'border-gray-300 hover:bg-gray-50 text-gray-700'
                     }`}
                     onClick={() => setNewBetCategory(category.name)}
@@ -151,7 +151,7 @@ const CreateBetModal: React.FC<CreateBetModalProps> = ({
             <div>
               <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 transition-colors duration-200`}>Platform Stake</label>
               <div className={`w-full px-3 py-2 border rounded-md ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-700'} transition-colors duration-200`}>
-                3 MON (Fixed)
+                3 CELO (Fixed)
               </div>
               <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1 transition-colors duration-200`}>
                 Required platform stake to create a bet. This ensures quality predictions.
@@ -159,7 +159,7 @@ const CreateBetModal: React.FC<CreateBetModalProps> = ({
             </div>
             {/* Vote Stake Amount Input */}
             <div>
-              <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 transition-colors duration-200`}>Vote Stake Amount (MON)</label>
+              <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 transition-colors duration-200`}>Vote Stake Amount (CELO)</label>
               <input
                 type="number"
                 className={`w-full px-3 py-2 border rounded-md ${darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-700'} transition-colors duration-200`}
@@ -169,7 +169,7 @@ const CreateBetModal: React.FC<CreateBetModalProps> = ({
                 step="0.1"
               />
               <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1 transition-colors duration-200`}>
-                Amount each voter must stake to participate (minimum {MIN_VOTE_STAKE} MON). Winners split the total pool.
+                Amount each voter must stake to participate (minimum {MIN_VOTE_STAKE} CELO). Winners split the total pool.
               </p>
             </div>
             {/* Duration */}
@@ -203,7 +203,7 @@ const CreateBetModal: React.FC<CreateBetModalProps> = ({
                   type="button"
                   className={`px-4 py-2 border rounded-md text-sm flex items-center justify-center transition-colors duration-200 ${
                     betType === 'voting'
-                      ? darkMode ? 'border-purple-500 bg-purple-900 text-purple-300' : 'border-purple-500 bg-purple-50 text-purple-700'
+                      ? darkMode ? 'border-yellow-500 bg-yellow-900 text-yellow-200' : 'border-yellow-500 bg-yellow-50 text-yellow-800'
                       : darkMode ? 'border-gray-600 hover:bg-gray-700 text-gray-300' : 'border-gray-300 hover:bg-gray-50 text-gray-700'
                   }`}
                   onClick={() => setBetType('voting')}
@@ -214,7 +214,7 @@ const CreateBetModal: React.FC<CreateBetModalProps> = ({
                   type="button"
                   className={`px-4 py-2 border rounded-md text-sm flex items-center justify-center transition-colors duration-200 ${
                     betType === 'verified'
-                      ? darkMode ? 'border-purple-500 bg-purple-900 text-purple-300' : 'border-purple-500 bg-purple-50 text-purple-700'
+                      ? darkMode ? 'border-yellow-500 bg-yellow-900 text-yellow-200' : 'border-yellow-500 bg-yellow-50 text-yellow-800'
                       : darkMode ? 'border-gray-600 hover:bg-gray-700 text-gray-300' : 'border-gray-300 hover:bg-gray-50 text-gray-700'
                   }`}
                   onClick={() => setBetType('verified')}
@@ -233,7 +233,7 @@ const CreateBetModal: React.FC<CreateBetModalProps> = ({
             {betType === 'verified' && (
               <>
                 {/* Info about how Yay/Nay wins for verified bets */}
-                <div className={`mb-4 p-3 rounded-md ${darkMode ? 'bg-blue-900/40 text-blue-200 border border-blue-800' : 'bg-blue-50 text-blue-800 border border-blue-200'}`}> 
+                <div className={`mb-4 p-3 rounded-md ${darkMode ? 'bg-yellow-900/40 text-yellow-200 border border-yellow-800' : 'bg-yellow-50 text-yellow-800 border border-yellow-200'}`}> 
                   <div className="font-semibold mb-1">How winners are determined:</div>
                   <ul className="list-disc pl-5 text-sm">
                     <li><b>Yay</b> wins if the price moves by at least the threshold in the predicted direction (pump/dump).</li>
@@ -255,8 +255,8 @@ const CreateBetModal: React.FC<CreateBetModalProps> = ({
                         className={`relative flex flex-col items-center p-4 rounded-lg border transition-all duration-200 ${
                           selectedAsset === asset.symbol
                             ? darkMode
-                              ? 'border-purple-500 bg-purple-900/50 shadow-lg shadow-purple-500/20'
-                              : 'border-purple-500 bg-purple-50 shadow-lg shadow-purple-500/20'
+                              ? 'border-yellow-400 bg-yellow-900/50 shadow-lg shadow-yellow-400/20'
+                              : 'border-yellow-400 bg-yellow-50 shadow-lg shadow-yellow-400/20'
                             : darkMode
                               ? 'border-gray-700 bg-gray-800 hover:border-gray-600'
                               : 'border-gray-200 hover:border-gray-300'
@@ -272,7 +272,7 @@ const CreateBetModal: React.FC<CreateBetModalProps> = ({
                         </div>
                         <span className={`text-sm font-medium ${
                           selectedAsset === asset.symbol
-                            ? darkMode ? 'text-purple-300' : 'text-purple-700'
+                            ? darkMode ? 'text-yellow-200' : 'text-yellow-800'
                             : darkMode ? 'text-gray-300' : 'text-gray-700'
                         }`}>
                           {asset.symbol}
@@ -284,7 +284,7 @@ const CreateBetModal: React.FC<CreateBetModalProps> = ({
                         </span>
                         {selectedAsset === asset.symbol && (
                           <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full ${
-                            darkMode ? 'bg-purple-500' : 'bg-purple-600'
+                            darkMode ? 'bg-yellow-400' : 'bg-yellow-400'
                           } flex items-center justify-center`}>
                             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -316,7 +316,7 @@ const CreateBetModal: React.FC<CreateBetModalProps> = ({
                         </div>
                         {isPriceLoading ? (
                           <div className="flex items-center space-x-2">
-                            <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                            <div className="w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
                             <span className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                               Loading...
                             </span>
@@ -395,8 +395,8 @@ const CreateBetModal: React.FC<CreateBetModalProps> = ({
             disabled={isCreatingBet || isTransactionPending || isFirestorePending || !isPredictionValid}
             className={`w-full ${
               darkMode 
-                ? (isCreatingBet || isTransactionPending || isFirestorePending) ? 'bg-purple-800' : 'bg-purple-700 hover:bg-purple-600' 
-                : (isCreatingBet || isTransactionPending || isFirestorePending) ? 'bg-purple-700' : 'bg-purple-600 hover:bg-purple-700'
+                ? (isCreatingBet || isTransactionPending || isFirestorePending) ? 'bg-yellow-900' : 'bg-yellow-500 hover:bg-yellow-600' 
+                : (isCreatingBet || isTransactionPending || isFirestorePending) ? 'bg-yellow-600' : 'bg-yellow-500 hover:bg-yellow-600'
             } text-white py-2 px-4 rounded-md font-medium transition-colors duration-200 disabled:opacity-50 flex items-center justify-center`}
             onClick={async () => { await onCreateBet(); }}
           >
@@ -410,7 +410,7 @@ const CreateBetModal: React.FC<CreateBetModalProps> = ({
                 <span>Failed - Click to retry</span>
               </div>
             ) : (
-              'Create Bet (3 MON stake)'
+              'Create Bet (3 CELO stake)'
             )}
           </button>
         </div>

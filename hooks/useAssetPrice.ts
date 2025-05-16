@@ -6,7 +6,7 @@ import CHAINLINK_ABI from '../contracts/abi/ChainlinkAggregator.json';
 import { shouldThrottle, updateBackoff, getBackoffDelay } from '../lib/utils/rpcUtils';
 
 // Contract addresses
-const BETCASTER_ADDRESS = '0xB19ee874ba79Cc171DE58cA9c03504F49821250A';
+const BETCASTER_ADDRESS = '0x5de50FF0A6Ac3B9f6F7beE2e72EcadAa3a718705';
 
 // Cache for price data
 const priceCache = new Map<string, { price: string; timestamp: number }>();

@@ -46,8 +46,8 @@ const WalletModal: React.FC<WalletModalProps> = ({
               disabled={isWalletLoading}
               className={`w-full py-2 px-4 rounded-lg font-medium ${
                 darkMode 
-                  ? 'bg-purple-600 hover:bg-purple-500 text-white' 
-                  : 'bg-purple-600 hover:bg-purple-700 text-white'
+                  ? 'bg-yellow-400 hover:bg-yellow-300 text-black' 
+                  : 'bg-yellow-400 hover:bg-yellow-500 text-black'
               } ${isWalletLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {isWalletLoading ? (
@@ -63,7 +63,7 @@ const WalletModal: React.FC<WalletModalProps> = ({
         ) : (
           <>
             <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
-              Please switch to Monad Testnet to use BetCaster
+              Please switch to Celo Mainnet to use BetCaster
             </p>
             <div className={`flex items-center p-3 rounded-lg mb-4 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
               <div className="flex-1">
@@ -80,8 +80,8 @@ const WalletModal: React.FC<WalletModalProps> = ({
               disabled={isWalletLoading}
               className={`w-full py-2 px-4 rounded-lg font-medium ${
                 darkMode 
-                  ? 'bg-purple-600 hover:bg-purple-500 text-white' 
-                  : 'bg-purple-600 hover:bg-purple-700 text-white'
+                  ? 'bg-yellow-400 hover:bg-yellow-300 text-black' 
+                  : 'bg-yellow-400 hover:bg-yellow-500 text-black'
               } ${isWalletLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {isWalletLoading ? (
@@ -90,7 +90,7 @@ const WalletModal: React.FC<WalletModalProps> = ({
                   Switching...
                 </div>
               ) : (
-                'Switch to Monad Testnet'
+                'Switch to Celo Mainnet'
               )}
             </button>
           </>

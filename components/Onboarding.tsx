@@ -99,7 +99,7 @@ export default function Onboarding({ darkMode, onEnter }: OnboardingProps) {
 
   return (
     <div className={`flex flex-col min-h-screen items-center justify-center ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-800'} transition-colors duration-200`}>
-      <h1 className="text-3xl font-bold mb-6 text-center">Welcome to BetCaster</h1>
+      <h1 className="text-3xl font-bold mb-6 text-center">Welcome to CeloCaster</h1>
       <p className="mb-8 text-center text-lg max-w-xl">Predict, vote, and win! Here are some real predictions from our community:</p>
       <div className="relative flex items-center justify-center mb-10 w-full" style={{ height: 340, maxWidth: 400 }}>
         {loading ? (
@@ -132,7 +132,7 @@ export default function Onboarding({ darkMode, onEnter }: OnboardingProps) {
         )}
       </div>
       <button
-        className={`mt-8 px-8 py-3 rounded-full text-lg font-semibold shadow-lg transition-colors duration-200 ${darkMode ? 'bg-purple-700 hover:bg-purple-600 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}
+        className={`mt-8 px-8 py-3 rounded-full text-lg font-semibold shadow-lg transition-colors duration-200 ${darkMode ? 'bg-yellow-300 hover:bg-yellow-200 text-black' : 'bg-yellow-300 hover:bg-yellow-400 text-black'}`}
         onClick={onEnter}
       >
         Enter App

@@ -41,7 +41,7 @@ export default function ActivityBetCard({ bet, darkMode }: ActivityBetCardProps)
           <img src={bet.pfpUrl} alt={bet.author} className="h-6 w-6 rounded-full object-cover" />
         ) : (
           <span className={`h-6 w-6 rounded-full flex items-center justify-center font-bold text-sm ${
-            darkMode ? 'bg-purple-300 text-purple-900' : 'bg-purple-200 text-purple-700'
+            darkMode ? 'bg-yellow-200 text-yellow-900' : 'bg-yellow-100 text-yellow-800'
           }`}>
             {bet.author?.charAt(0).toUpperCase()}
           </span>

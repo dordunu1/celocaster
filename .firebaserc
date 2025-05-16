@@ -1,5 +1,9 @@
 {
   "projects": {
-    "default": "betcaster-968e2"
-  }
+    "default": "celobet-fc1c6",
+    "celobet": "celobet-fc1c6",
+    "staging": "celobet-fc1c6"
+  },
+  "targets": {},
+  "etags": {}
 }

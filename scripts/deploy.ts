@@ -19,6 +19,9 @@ async function main() {
     throw new Error("Invalid price feed addresses in environment variables");
   }
 
+  console.log('Deploy script - RPC_URL:', process.env.NEXT_PUBLIC_CELO_RPC_1);
+  console.log('Deploy script - PRIVATE_KEY:', process.env.PRIVATE_KEY);
+
   // Deploy Betcaster contract
   console.log("\nDeploying Betcaster contract...");
   const Betcaster = await ethers.getContractFactory("Betcaster");
@@ -52,8 +55,8 @@ async function main() {
     ethUsdFeed: ethFeed,
     betcaster: betcaster.address,
     betcasterAutomation: automation.address,
-    chainId: process.env.NEXT_PUBLIC_MONAD_CHAIN_ID,
-    network: "monad-testnet"
+    chainId: process.env.NEXT_PUBLIC_CELO_CHAIN_ID,
+    network: "celo-mainnet"
   };
 
   // Write deployment info to a file
@@ -65,8 +68,8 @@ async function main() {
 
   console.log("\nVerification commands:");
   console.log("==================");
-  console.log(`npx hardhat verify --network monad ${betcaster.address} ["BTC","ETH"] ["${btcFeed}","${ethFeed}"]`);
-  console.log(`npx hardhat verify --network monad ${automation.address} ${betcaster.address}`);
+  console.log(`npx hardhat verify --network celo ${betcaster.address} ["BTC","ETH"] ["${btcFeed}","${ethFeed}"]`);
+  console.log(`npx hardhat verify --network celo ${automation.address} ${betcaster.address}`);
 }
 
 main()
