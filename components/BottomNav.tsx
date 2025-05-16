@@ -16,6 +16,8 @@ interface BottomNavProps {
   isEthProviderAvailable: boolean;
   connectError: Error | null;
   switchError: Error | null;
+  activePage: 'feed' | 'activities';
+  onNavigate: (page: 'feed' | 'activities') => void;
 }
 
 export default function BottomNav({ 
@@ -29,7 +31,9 @@ export default function BottomNav({
   balanceData,
   isEthProviderAvailable,
   connectError,
-  switchError
+  switchError,
+  activePage,
+  onNavigate
 }: BottomNavProps) {
   const [mounted, setMounted] = useState(false);
   const [showBalance, setShowBalance] = useState(false);
@@ -58,21 +62,29 @@ export default function BottomNav({
 
         <div className="flex items-center justify-between py-2">
           {/* Feed */}
-          <button className={`flex flex-col items-center p-2 ${
-            darkMode ? 'bg-purple-800 text-white' : 'bg-purple-700 text-white'
-          } rounded transition-colors`}>
+          <button
+            className={`flex flex-col items-center p-2 rounded transition-colors ${
+              activePage === 'feed'
+                ? darkMode ? 'bg-purple-800 text-white' : 'bg-purple-700 text-white'
+                : darkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'
+            }`}
+            onClick={() => onNavigate('feed')}
+          >
             <Award className="h-6 w-6" />
             <span className="text-xs mt-1">Feed</span>
           </button>
 
-          {/* My Bets */}
-          <button 
-            className={`flex flex-col items-center p-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'} cursor-not-allowed`}
-            disabled={true}
+          {/* My Activities */}
+          <button
+            className={`flex flex-col items-center p-2 rounded transition-colors ${
+              activePage === 'activities'
+                ? darkMode ? 'bg-purple-800 text-white' : 'bg-purple-700 text-white'
+                : darkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'
+            }`}
+            onClick={() => onNavigate('activities')}
           >
             <TrendingUp className="h-6 w-6" />
-            <span className="text-xs mt-1">My Bets</span>
-            <span className="text-[10px] opacity-75">Coming Soon</span>
+            <span className="text-xs mt-1">My Activities</span>
           </button>
 
           {/* Leaderboard */}

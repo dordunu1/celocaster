@@ -45,6 +45,7 @@ interface BetVotingProps {
   predictionType?: 'pump' | 'dump';
   disableVoting?: boolean;
   updateSingleBet?: (betId: string) => Promise<void>;
+  darkMode: boolean;
 }
 
 // Helper: fetch claimable prize (estimate, not on-chain call)
@@ -54,7 +55,7 @@ function getClaimAmount(voteStake: number, yayCount: number, nayCount: number, y
   return ((yayCount + nayCount) * voteStake) / totalWinners;
 }
 
-export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSuccess, userVote, yayCount = 0, nayCount = 0, isResolved = false, predictionType, disableVoting = false, updateSingleBet }: BetVotingProps) {
+export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSuccess, userVote, yayCount = 0, nayCount = 0, isResolved = false, predictionType, disableVoting = false, updateSingleBet, darkMode }: BetVotingProps) {
   const [isVoting, setIsVoting] = useState(false);
   const [lastVoteType, setLastVoteType] = useState<'yay' | 'nay' | null>(null);
   const [currentTxHash, setCurrentTxHash] = useState<`0x${string}` | undefined>(undefined);
@@ -244,18 +245,40 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
         args: [betId],
         chainId,
         account: address,
+        gas: BigInt(300000), // Use BigInt constructor instead of literal
       });
       
-      setTimeout(async () => {
-        await new Promise(res => setTimeout(res, 2000));
+      // Wait for transaction receipt
+      const receipt = await new Promise((resolve, reject) => {
+        const checkReceipt = async () => {
+          try {
+            const provider = getFallbackProvider();
+            const receipt = await provider.getTransactionReceipt(txResponse);
+            if (receipt) {
+              resolve(receipt);
+            } else {
+              setTimeout(checkReceipt, 1000);
+            }
+          } catch (error) {
+            reject(error);
+          }
+        };
+        checkReceipt();
+      });
+
+      if (receipt) {
         const provider = getFallbackProvider();
         const contract = new ethers.Contract(betcasterAddress, betcasterABI, provider);
         const [, , claimed] = await contract.getUserVoteInfo(betId, address);
         setHasClaimed(claimed);
-        onVoteSuccess?.();
+        if (updateSingleBet) {
+          await updateSingleBet(betId);
+        } else {
+          onVoteSuccess?.();
+        }
         setShowClaimModal(false);
         toast.success('Prize claimed successfully!');
-      }, 3000);
+      }
     } catch (e) {
       if (e instanceof Error) {
         if (e.message.includes('insufficient funds')) {
@@ -336,19 +359,42 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
       {/* Claim Modal */}
       {showClaimModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-40">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 min-w-[300px]">
+          <div className={`rounded-lg shadow-lg p-6 min-w-[300px] ${darkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-800'}`}> 
             <h3 className="text-lg font-semibold mb-2 text-center">Claim Prize</h3>
             <p className="text-center mb-4">You will receive <span className="font-bold">{claimAmount.toFixed(4)} MON</span></p>
             <div className="flex justify-center gap-4">
               <button
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium"
+                className={`px-4 py-2 rounded-md font-medium flex items-center justify-center transition-colors duration-200 ${
+                  isClaiming
+                    ? darkMode
+                      ? 'bg-green-900 text-green-200 opacity-70 cursor-not-allowed'
+                      : 'bg-green-200 text-green-700 opacity-70 cursor-not-allowed'
+                    : darkMode
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
                 onClick={handleClaim}
                 disabled={isClaiming}
               >
-                {isClaiming ? 'Claiming...' : 'Confirm'}
+                {isClaiming ? (
+                  <>
+                    <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></span>
+                    Claiming...
+                  </>
+                ) : (
+                  'Confirm'
+                )}
               </button>
               <button
-                className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md font-medium"
+                className={`px-4 py-2 rounded-md font-medium transition-colors duration-200 ${
+                  isClaiming
+                    ? darkMode
+                      ? 'bg-gray-700 text-gray-400 opacity-70 cursor-not-allowed'
+                      : 'bg-gray-200 text-gray-400 opacity-70 cursor-not-allowed'
+                    : darkMode
+                    ? 'bg-gray-600 hover:bg-gray-700 text-gray-200'
+                    : 'bg-gray-300 hover:bg-gray-400 text-gray-800'
+                }`}
                 onClick={() => setShowClaimModal(false)}
                 disabled={isClaiming}
               >

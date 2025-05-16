@@ -59,7 +59,7 @@ export default function HotBetsRow({ darkMode }: HotBetsRowProps) {
   }, []);
 
   return (
-    <div className={`overflow-x-auto ${darkMode ? 'bg-gray-800 text-gray-100 border-gray-700' : 'bg-white text-gray-800 border-gray-200'} border-b py-1 transition-colors duration-200`}>
+    <div className={`overflow-x-auto hide-scrollbar ${darkMode ? 'bg-gray-800 text-gray-100 border-gray-700' : 'bg-white text-gray-800 border-gray-200'} border-b py-1 transition-colors duration-200`}>
       <div className="flex items-center space-x-2 animate-hotbets-scroll" style={{ minHeight: 30, width: 'max-content' }}>
         {hotBets.length > 0 ? (
           hotBets.map(bet => (

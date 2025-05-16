@@ -179,4 +179,9 @@ export const betService = {
     const betRef = doc(db, BETS_COLLECTION, betId);
     await updateDoc(betRef, { status });
   },
-}; 
+
+  // Get votes for a bet
+  async getVotes(voteQuery: any) {
+    return getDocs(voteQuery);
+  }
+};

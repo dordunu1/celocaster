@@ -31,3 +31,17 @@ body {
     text-wrap: balance;
   }
 }
+
+/* Hide horizontal scrollbar but keep scroll functionality (robust for Windows/Chrome) */
+.hide-scrollbar {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+  overflow-y: hidden !important;
+  margin-bottom: -17px !important; /* Hide scrollbar for most Windows browsers */
+  padding-bottom: 17px !important; /* Keep content visible */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
