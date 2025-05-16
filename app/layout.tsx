@@ -8,12 +8,12 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "BetCaster",
-  description: "Decentralized Prediction Markets on Monad - Bet on crypto price moves or community outcomes. Create, vote, and win with transparent, on-chain prediction markets—whether price-verified or community-driven—powered by Monad.",
+  title: "CeloCaster",
+  description: "Decentralized Prediction Markets on Celo - Bet on crypto price moves or community outcomes. Create, vote, and win with transparent, on-chain prediction markets—whether price-verified or community-driven—powered by Celo.",
   openGraph: {
-    title: "BetCaster",
+    title: "CeloCaster",
     description: "Predict, bet, and win! The easiest way to create and join decentralized prediction markets—price-based or community-voted—on Monad.",
-    images: ["https://betcaster.netlify.app/images/feed.png"],
+    images: ["https://celocaster.netlify.app/images/feed.png"],
   },
 };
 

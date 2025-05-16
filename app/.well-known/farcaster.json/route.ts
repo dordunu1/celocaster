@@ -6,12 +6,12 @@ export async function GET() {
     // TODO: Add account association
     frame: {
       version: "1",
-      name: "BetCaster",
+      name: "CeloCaster",
       iconUrl: `${APP_URL}/images/icon.png`,
       homeUrl: `${APP_URL}`,
       imageUrl: `${APP_URL}/images/feed.png`,
       screenshotUrls: [],
-      tags: ["monad", "farcaster", "betting", "prediction", "crypto"],
+      tags: ["celo", "farcaster", "betting", "prediction", "crypto"],
       primaryCategory: "prediction",
       buttonTitle: "Bet Now!",
       splashImageUrl: `${APP_URL}/images/splash.png`,
