@@ -9,7 +9,7 @@ import { Bet, Category } from '../lib/types/bet';
 import toast from 'react-hot-toast';
 
 const betcasterABI = betcasterArtifact.abi;
-const MIN_VOTE_STAKE = 0.1; // 0.1 MON
+const MIN_VOTE_STAKE = 0.1; // 0.1 CELO
 
 export function useCreateBet(betcasterAddress: `0x${string}`) {
   const { context } = useMiniAppContext();
@@ -65,7 +65,7 @@ export function useCreateBet(betcasterAddress: `0x${string}`) {
     }
     if (!newBetContent.trim()) return false;
     if (!newBetVoteAmount || isNaN(Number(newBetVoteAmount)) || Number(newBetVoteAmount) < MIN_VOTE_STAKE) {
-      toast.error(`Vote stake less than ${MIN_VOTE_STAKE} MON will fail. Please enter at least ${MIN_VOTE_STAKE} MON.`);
+      toast.error(`Vote stake less than ${MIN_VOTE_STAKE} CELO will fail. Please enter at least ${MIN_VOTE_STAKE} CELO.`);
       return false;
     }
     setIsCreatingBet(true);

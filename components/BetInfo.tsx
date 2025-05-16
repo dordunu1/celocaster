@@ -103,7 +103,7 @@ export default function BetInfo({ bet, darkMode, betcasterAddress, onVoteSuccess
       <div className={`px-4 py-2 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border-t transition-colors duration-200`}>
         {/* Info Row */}
         <div className="flex items-center text-sm mb-1">
-          <span className="font-medium">{bet.betAmount} MON to vote</span>
+          <span className="font-medium">{bet.betAmount} CELO to vote</span>
           <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${darkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>Chainlink Verified</span>
         </div>
         {/* Threshold Status */}
@@ -146,7 +146,7 @@ export default function BetInfo({ bet, darkMode, betcasterAddress, onVoteSuccess
       <div className="flex flex-col space-y-2">
         <div className="flex items-center text-sm justify-between w-full">
           <div className="flex items-center">
-            <span className="font-medium">{bet.betAmount} MON to vote</span>
+            <span className="font-medium">{bet.betAmount} CELO to vote</span>
             <span className="text-xs ml-1">• Community vote</span>
           </div>
         </div>

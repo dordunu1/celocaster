@@ -56,7 +56,7 @@ export async function handleCreateBet({
     return;
   }
   if (!newBetVoteAmount || isNaN(Number(newBetVoteAmount)) || Number(newBetVoteAmount) < MIN_VOTE_STAKE) {
-    toast.error(`Vote stake less than ${MIN_VOTE_STAKE} MON will fail. Please enter at least ${MIN_VOTE_STAKE} MON.`);
+    toast.error(`Vote stake less than ${MIN_VOTE_STAKE} CELO will fail. Please enter at least ${MIN_VOTE_STAKE} CELO.`);
     return;
   }
   setIsCreatingBet(true);
