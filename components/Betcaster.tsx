@@ -521,11 +521,9 @@ export default function BetCaster({ betcasterAddress }: { betcasterAddress: `0x$
                                 onClick={() => handleAddComment(bet.id)}
                                 disabled={isPosting}
                                 className={`
-                                  ${darkMode 
-                                    ? isPosting ? 'bg-yellow-500' : 'bg-yellow-500 hover:bg-yellow-600' 
-                                    : isPosting ? 'bg-yellow-500' : 'bg-yellow-500 hover:bg-yellow-600'
-                                  } text-white px-6 py-2 rounded-r-full text-sm transition-colors duration-200 disabled:opacity-50 min-w-[80px] flex items-center justify-center`}
-                                style={{ backgroundColor: darkMode ? '#7c3aed' : '#6d28d9', color: '#fff', opacity: isPosting ? 0.5 : 1 }}
+                                  bg-yellow-500 text-white px-6 py-2 rounded-r-full text-sm transition-colors duration-200 disabled:opacity-50 min-w-[80px] flex items-center justify-center
+                                  ${!isPosting ? 'hover:bg-yellow-600' : ''}
+                                `}
                               >
                                 {isPosting ? (
                                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
