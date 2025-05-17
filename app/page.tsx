@@ -23,10 +23,10 @@ const frame = {
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: "BetCaster - Decentralized Prediction Markets on Monad",
+    title: "CeloCaster - Decentralized Prediction Markets on Celo",
     openGraph: {
-      title: "BetCaster - Decentralized Prediction Markets on Monad",
-      description: "Predict, bet, and win! Create and join decentralized prediction markets—price-based or community-voted—on Monad.",
+      title: "CeloCaster - Decentralized Prediction Markets on Celo",
+      description: "Predict, bet, and win! Create and join decentralized prediction markets—price-based or community-voted—on Celo.",
     },
     other: {
       "fc:frame": JSON.stringify(frame),
