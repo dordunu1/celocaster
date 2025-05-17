@@ -3,7 +3,7 @@ import { parseEther } from 'viem';
 import { useState, useEffect, useRef } from 'react';
 import { useMiniAppContext } from '../hooks/use-miniapp-context';
 import { betService } from '../lib/services/betService';
-import BetcasterArtifact from '../artifacts/contracts/Betcaster.sol/Betcaster.json';
+import CelocasterArtifact from '../artifacts/contracts/Celocaster.sol/Celocaster.json';
 import { ethers } from 'ethers';
 import { writeContract } from 'wagmi/actions';
 import toast from 'react-hot-toast';
@@ -22,7 +22,7 @@ function getFallbackProvider() {
 }
 
 // Import ABI for the castVote function
-const betcasterABI = BetcasterArtifact.abi;
+const celocasterABI = CelocasterArtifact.abi;
 
 // Contract constants
 const MIN_VOTE_STAKE = 0.1; // 0.1 CELO
@@ -145,7 +145,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
       // Prepare transaction parameters with proper configuration
       const params = {
         address: betcasterAddress,
-        abi: betcasterABI,
+        abi: celocasterABI,
         functionName: 'castVote',
         args: [betId, isYay],
         value: voteStakeWei,
@@ -194,7 +194,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
       if (!isResolved) return;
       try {
         const provider = getFallbackProvider();
-        const contract = new ethers.Contract(betcasterAddress, betcasterABI, provider);
+        const contract = new ethers.Contract(betcasterAddress, celocasterABI, provider);
         const result = await contract.getBetInfo(betId);
         setYayWon(result.yayWon);
       } catch (e) {
@@ -218,7 +218,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
       if (!address || !betId) return;
       try {
         const provider = getFallbackProvider();
-        const contract = new ethers.Contract(betcasterAddress, betcasterABI, provider);
+        const contract = new ethers.Contract(betcasterAddress, celocasterABI, provider);
         const [, , claimed] = await contract.getUserVoteInfo(betId, address);
         setHasClaimed(claimed);
       } catch (e) {
@@ -234,7 +234,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
     try {
       const txResponse = await writeContractAsync({
         address: betcasterAddress,
-        abi: betcasterABI,
+        abi: celocasterABI,
         functionName: 'claimPrize',
         args: [betId],
         chainId,
@@ -262,7 +262,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
 
       if (receipt) {
         const provider = getFallbackProvider();
-        const contract = new ethers.Contract(betcasterAddress, betcasterABI, provider);
+        const contract = new ethers.Contract(betcasterAddress, celocasterABI, provider);
         const [, , claimed] = await contract.getUserVoteInfo(betId, address);
         setHasClaimed(claimed);
         if (updateSingleBet) {

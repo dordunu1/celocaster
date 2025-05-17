@@ -1,0 +1,25 @@
+# Smart Contract Details
+
+The core functionality and logic of the CeloCaster platform are governed by the `Celocaster.sol` smart contract, which implements the `ICelocaster.sol` interface. This contract is deployed on the Celo blockchain and handles the lifecycle of prediction markets from creation to prize distribution.
+
+Key aspects and features implemented in the smart contract include:
+
+*   **Ownership Management:** The `Celocaster.sol` contract inherits from OpenZeppelin's `Ownable` contract. This pattern provides a basic access control mechanism where a single address, the owner, has exclusive rights to certain functions. The initial owner is the address that deploys the contract. Ownership can be transferred to a new address by the current owner calling the `transferOwnership(address newOwner)` function.
+
+*   **Platform Stake:** A fee is required to create a new prediction market on CeloCaster. This is managed by the `platformStake` state variable (currently set to 3 CELO). The value of `platformStake` can be updated by the contract owner using the `setPlatformStake(uint256 newStake)` function. This provides flexibility in adjusting the creation fee as needed.
+
+*   **Vote Stake:** Each participant in a prediction market is required to stake a specific amount of CELO to cast a vote. The minimum acceptable vote stake is defined by the `MIN_VOTE_STAKE` constant (currently 0.1 CELO). The creator of a bet sets the required vote stake amount for their specific market when creating the bet.
+
+*   **Asset Management for Verified Markets:** The contract maintains a mapping of supported asset symbols (like "BTC", "ETH", "CELO") to their corresponding Chainlink price feed contract addresses on the Celo network. This allows the contract to fetch reliable, decentralized price data for resolving verified prediction markets. New assets and their price feeds can be added after deployment by the contract owner using the `addAsset(string memory symbol, address priceFeed)` function. Initial supported assets are configured during the contract deployment.
+
+*   **Prediction Market Lifecycle:** The contract handles the entire lifecycle of a bet, including:
+    *   `createBet()`: Allows users to create new prediction markets by staking the required `platformStake` and defining parameters like vote stake, duration, asset (for verified bets), price threshold, and prediction type (pump/dump for verified bets).
+    *   `castVote()`: Enables users to participate in an active bet by staking the required `voteStake` and choosing either 'Yay' or 'Nay'.
+    *   `resolveBet()`: This function is called after the bet's expiry time to determine the outcome based on either the Chainlink price feed (for verified bets) or the majority vote (for community bets). The prize pool is then prepared for distribution.
+    *   `claimPrize()`: Allows users who voted on the winning side of a resolved bet to claim their proportional share of the prize pool.
+
+*   **Security Measures:** The contract incorporates the `ReentrancyGuard` modifier to prevent reentrant calls, enhancing the security of sensitive functions like `castVote` and `claimPrize`. Planned security audits will further validate the contract's resilience against potential vulnerabilities.
+
+*   **Prize Pool Distribution:** The contract automatically calculates and distributes the prize pool among the winning voters based on their staked amounts, as detailed in the "Rewards & Earnings Formula" section.
+
+*   **Withdrawal Function:** An `onlyOwner` function `withdraw()` is included to allow the contract owner to withdraw any accumulated platform stakes or other funds held by the contract (excluding funds locked in active bets). 

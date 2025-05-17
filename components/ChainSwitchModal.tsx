@@ -41,7 +41,7 @@ export default function ChainSwitchModal({
         
         <div className="mb-6">
           <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
-            Please switch to Celo Mainnet to use BetCaster
+            Please switch to Celo Mainnet to use Celocaster
           </p>
           <div className={`flex items-center p-3 rounded-lg mb-4 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
             <div className="flex-1">

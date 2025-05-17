@@ -1,10 +1,10 @@
 import { Metadata } from "next";
 import App from "@/components/pages/app";
 import { APP_URL } from "@/lib/constants";
-import BetCaster from '../components/Betcaster';
+import Celocaster from '@/components/Celocaster';
 
 // Contract address from deployments.json
-const BETCASTER_ADDRESS = process.env.NEXT_PUBLIC_BETCASTER_ADDRESS as `0x${string}`;
+const CELOCASTER_ADDRESS = process.env.NEXT_PUBLIC_CELOCASTER_ADDRESS as `0x${string}`;
 
 const frame = {
   version: "next",
@@ -13,7 +13,7 @@ const frame = {
     title: "Bet Now!",
     action: {
       type: "launch_frame",
-      name: "BetCaster",
+      name: "Celocaster",
       url: APP_URL,
       splashImageUrl: `${APP_URL}/images/splash.png`,
       splashBackgroundColor: "#f7f7f7",

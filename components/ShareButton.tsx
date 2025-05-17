@@ -14,7 +14,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({ content, darkMode }) => {
 
   const handleShare = async () => {
     const shareUrl = window.location.origin;
-    const shareText = `🎲 Bet Prediction: ${content}\nVote YAY or NAY on BetCaster!`;
+    const shareText = `🎲 Bet Prediction: ${content}\nVote YAY or NAY on Celocaster!`;
     
     if (actions && actions.composeCast) {
       await actions.composeCast({

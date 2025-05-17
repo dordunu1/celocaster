@@ -4,14 +4,14 @@ import { parseEther } from 'viem';
 import { betService } from '../lib/services/betService';
 import { useMiniAppContext } from './use-miniapp-context';
 import { useAssetPrice } from './useAssetPrice';
-import betcasterArtifact from '../artifacts/contracts/Betcaster.sol/Betcaster.json';
+import celocasterArtifact from '../artifacts/contracts/Celocaster.sol/Celocaster.json';
 import { Bet, Category } from '../lib/types/bet';
 import toast from 'react-hot-toast';
 
-const betcasterABI = betcasterArtifact.abi;
+const celocasterABI = celocasterArtifact.abi;
 const MIN_VOTE_STAKE = 0.1; // 0.1 CELO
 
-export function useCreateBet(betcasterAddress: `0x${string}`) {
+export function useCreateBet(celocasterAddress: `0x${string}`) {
   const { context } = useMiniAppContext();
   const [isCreatingBet, setIsCreatingBet] = useState(false);
   const [pendingBetId, setPendingBetId] = useState<string | null>(null);
@@ -75,8 +75,8 @@ export function useCreateBet(betcasterAddress: `0x${string}`) {
       const betId = `${context.user.fid}-${Date.now()}`;
       setPendingBetId(betId);
       const params = {
-        address: betcasterAddress,
-        abi: betcasterABI,
+        address: celocasterAddress,
+        abi: celocasterABI,
         functionName: 'createBet',
         value: parseEther('3'),
         args: [

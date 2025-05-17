@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useContractRead } from 'wagmi';
 import { formatUnits } from 'viem';
-import BETCASTER_ABI from '../contracts/abi/Betcaster.json';
+import CELOCASTER_ABI from '../contracts/abi/Celocaster.json';
 import CHAINLINK_ABI from '../contracts/abi/ChainlinkAggregator.json';
 import { shouldThrottle, updateBackoff, getBackoffDelay } from '../lib/utils/rpcUtils';
 
 // Contract addresses
-const BETCASTER_ADDRESS = '0x5de50FF0A6Ac3B9f6F7beE2e72EcadAa3a718705';
+const CELOCASTER_ADDRESS = process.env.NEXT_PUBLIC_CELOCASTER_ADDRESS as `0x${string}`;
 
 // Cache for price data
 const priceCache = new Map<string, { price: string; timestamp: number }>();
@@ -25,10 +25,10 @@ export const useAssetPrice = (
   const lastUpdateRef = useRef(0);
   const mountedRef = useRef(true);
 
-  // Get price feed address from Betcaster contract
+  // Get price feed address from Celocaster contract
   const { data: priceFeedAddress, isError: isPriceFeedError } = useContractRead({
-    address: BETCASTER_ADDRESS,
-    abi: BETCASTER_ABI,
+    address: CELOCASTER_ADDRESS,
+    abi: CELOCASTER_ABI,
     functionName: 'getPriceFeed',
     args: [assetSymbol],
     query: {

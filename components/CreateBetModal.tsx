@@ -5,6 +5,9 @@ import { X, TrendingUp, Globe } from 'lucide-react';
 import Image from 'next/image';
 import { useAssetPrice } from '../hooks/useAssetPrice';
 
+// Temporary flag to disable bet creation
+const IS_CREATION_DISABLED = true;
+
 interface CategoryOption {
   id: number;
   name: string;
@@ -392,15 +395,17 @@ const CreateBetModal: React.FC<CreateBetModalProps> = ({
         <div className="p-6 border-t border-gray-200 dark:border-gray-700">
           <button
             type="button"
-            disabled={isCreatingBet || isTransactionPending || isFirestorePending || !isPredictionValid}
+            disabled={IS_CREATION_DISABLED || isCreatingBet || isTransactionPending || isFirestorePending || !isPredictionValid}
             className={`w-full ${
               darkMode 
-                ? (isCreatingBet || isTransactionPending || isFirestorePending) ? 'bg-yellow-900' : 'bg-yellow-500 hover:bg-yellow-600' 
-                : (isCreatingBet || isTransactionPending || isFirestorePending) ? 'bg-yellow-600' : 'bg-yellow-500 hover:bg-yellow-600'
+                ? (IS_CREATION_DISABLED || isCreatingBet || isTransactionPending || isFirestorePending) ? 'bg-yellow-900' : 'bg-yellow-500 hover:bg-yellow-600'
+                : (IS_CREATION_DISABLED || isCreatingBet || isTransactionPending || isFirestorePending) ? 'bg-yellow-600' : 'bg-yellow-500 hover:bg-yellow-600'
             } text-white py-2 px-4 rounded-md font-medium transition-colors duration-200 disabled:opacity-50 flex items-center justify-center`}
             onClick={async () => { await onCreateBet(); }}
           >
-            {(isCreatingBet || isTransactionPending || isFirestorePending) ? (
+            {IS_CREATION_DISABLED ? (
+              'Bet Creation Temporarily Disabled'
+            ) : (isCreatingBet || isTransactionPending || isFirestorePending) ? (
               <div className="flex items-center space-x-2">
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                 <span>{isFirestorePending ? 'Finalizing bet...' : isTransactionPending ? 'Confirming transaction...' : 'Waiting for wallet...'}</span>

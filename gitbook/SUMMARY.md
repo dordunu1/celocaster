@@ -1,0 +1,15 @@
+# Summary
+
+*   [Overview](overview.txt)
+*   [Problem](problem.txt)
+*   [Solution](solution.txt)
+*   [Key Features](key-features.txt)
+*   [Technology Stack](technology-stack.txt)
+*   [How it Works (Simplified)](how-it-works.txt)
+*   [Smart Contract Details](smart-contract-details.txt)
+*   [Deployed Contracts & Addresses](deployed-addresses.txt)
+*   [Rewards & Earnings Formula](rewards-earnings.txt)
+*   [Farcaster Integration](farcaster-integration.txt)
+*   [Incentives & Growth](incentives-growth.txt)
+*   [Roadmap](roadmap.txt)
+*   [Getting Started](getting-started.txt) 

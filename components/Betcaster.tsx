@@ -19,8 +19,8 @@ import BetPriceTracker from './BetPriceTracker';
 import { parseEther } from 'viem';
 import BetVoting from './BetVoting';
 import { Abi } from 'viem';
-import betcasterArtifact from '../artifacts/contracts/Betcaster.sol/Betcaster.json';
-const betcasterABI = betcasterArtifact.abi as Abi;
+import celocasterArtifact from '../artifacts/contracts/Celocaster.sol/Celocaster.json';
+const celocasterABI = celocasterArtifact.abi as Abi;
 import HotBetsRow from './HotBetsRow';
 import CountdownTimer from './CountdownTimer';
 import BottomNav from './BottomNav';
@@ -40,7 +40,7 @@ import MyActivities from './MyActivities';
 import { motion } from 'framer-motion';
 
 // Add contract address from app/page.tsx
-const BETCASTER_ADDRESS = process.env.NEXT_PUBLIC_BETCASTER_ADDRESS as `0x${string}`;
+const CELOCASTER_ADDRESS = process.env.NEXT_PUBLIC_CELOCASTER_ADDRESS as `0x${string}`;
 
 // Add contract constants
 const MIN_VOTE_STAKE = 0.1; // 0.1 CELO
@@ -63,7 +63,8 @@ const mockCategories: CategoryOption[] = [
 
 const SUPPORTED_ASSETS = [
   { symbol: 'BTC', name: 'Bitcoin', icon: '/images/btc.svg' },
-  { symbol: 'ETH', name: 'Ethereum', icon: '/images/eth.svg' }
+  { symbol: 'ETH', name: 'Ethereum', icon: '/images/eth.svg' },
+  { symbol: 'CELO', name: 'Celo', icon: '/images/celo.svg' }
 ];
 
 function BetSkeletonCard({ darkMode }: { darkMode: boolean }) {
@@ -105,7 +106,7 @@ function BetSkeletonCard({ darkMode }: { darkMode: boolean }) {
   );
 }
 
-export default function BetCaster({ betcasterAddress }: { betcasterAddress: `0x${string}` }) {
+export default function Celocaster({ celocasterAddress }: { celocasterAddress: `0x${string}` }) {
   const { context, actions, isEthProviderAvailable } = useMiniAppContext() as { context: any, actions: typeof sdk.actions | null, isEthProviderAvailable: boolean };
   const { isConnected, address, chainId } = useAccount();
   const { connect, connectors, error: connectError } = useConnect();
@@ -154,7 +155,7 @@ export default function BetCaster({ betcasterAddress }: { betcasterAddress: `0x$
   const [showSkeleton, setShowSkeleton] = useState(true);
 
   // Use the useCreateBet hook for bet creation
-  const createBet = useCreateBet(betcasterAddress);
+  const createBet = useCreateBet(celocasterAddress);
 
   // Rename the handlers to avoid conflicts
   const handleWalletConnect = () => {
@@ -288,7 +289,7 @@ export default function BetCaster({ betcasterAddress }: { betcasterAddress: `0x$
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Award className="h-6 w-6" />
-            <h1 className="text-xl font-bold">BetCaster</h1>
+            <h1 className="text-xl font-bold">Celocaster</h1>
           </div>
           <div className="flex items-center space-x-3">
             <button 
@@ -444,7 +445,7 @@ export default function BetCaster({ betcasterAddress }: { betcasterAddress: `0x$
                           <button
                             onClick={async () => {
                               const shareUrl = window.location.origin;
-                              const shareText = `🎲 Bet Prediction: ${bet.content}\nVote YAY or NAY on BetCaster!`;
+                              const shareText = `🎲 Bet Prediction: ${bet.content}\nVote YAY or NAY on Celocaster!`;
                               if (actions && actions.composeCast) {
                                 await actions.composeCast({
                                   text: shareText,
@@ -468,7 +469,7 @@ export default function BetCaster({ betcasterAddress }: { betcasterAddress: `0x$
                           <BetVoting
                             betId={bet.id}
                             voteStake={bet.betAmount}
-                            betcasterAddress={betcasterAddress}
+                            betcasterAddress={celocasterAddress}
                             onVoteSuccess={loadBets}
                             updateSingleBet={updateSingleBet}
                             userVote={bet.userVote}
@@ -493,7 +494,7 @@ export default function BetCaster({ betcasterAddress }: { betcasterAddress: `0x$
                       <BetInfo 
                         bet={bet} 
                         darkMode={darkMode} 
-                        betcasterAddress={BETCASTER_ADDRESS}
+                        betcasterAddress={CELOCASTER_ADDRESS}
                         onVoteSuccess={loadBets}
                       />
                       {/* Expanded Comments Section */}

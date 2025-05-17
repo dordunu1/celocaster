@@ -1,0 +1,17 @@
+# Deployed Contracts & Addresses
+
+The core components of the CeloCaster platform are governed by smart contracts deployed on the Celo blockchain. The following addresses are essential for interacting with and verifying the platform:
+
+*   **Celocaster Smart Contract:** `0x5de50FF0A6Ac3B9f6F7beE2e72EcadAa3a718705`
+    *   This is the main contract managing the prediction market logic, including bet creation, voting, resolution, and prize distribution.
+*   **CelocasterAutomation Smart Contract:** `0xBF098eDe4264fd46Dc2da4b6E87d1dF39271e7C9`
+    *   This contract is likely responsible for automated tasks related to bet resolution or other scheduled functions (Note: based on deploy.ts, its exact function needs to be confirmed from its code).
+
+**Chainlink Price Feed Addresses (Celo Mainnet):**
+
+*   **BTC/USD:** `0x128fE88eaa22bFFb868Bb3A584A54C96eE24014b`
+*   **ETH/USD:** `0x1FcD30A73D67639c1cD89ff5746E7585731c083B`
+*   **CELO/USD:** `0x0568fD19986748cEfF3301e55c0eb1E729E0Ab7e`
+    *   These Chainlink Aggregator contracts provide the price data used for resolving verified crypto price prediction markets on CeloCaster.
+
+_Note: Always verify contract addresses on a block explorer like CeloScan before interacting with them._ 

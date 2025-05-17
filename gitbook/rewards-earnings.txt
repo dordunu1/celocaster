@@ -1,0 +1,47 @@
+# Rewards & Earnings Formula
+
+The CeloCaster platform ensures a transparent and equitable distribution of the prize pool among winning participants. The total prize pool for a bet includes the initial platform stake contributed by the bet creator (currently 3 CELO) and the combined vote stakes from all users who participated in that bet. When a bet is resolved, the total prize pool is distributed proportionally to the users who voted on the winning side.
+
+## Prize Distribution
+
+If a bet resolves to a winning side (either 'Yay' or 'Nay'), the total prize pool is divided among all participants who voted on that winning side. The portion of the prize pool received by each winning voter is proportional to the amount of CELO they staked as their vote.
+
+## Calculating Individual Winnings (Profit)
+
+The profit for an individual winning voter is calculated based on their stake and the total stakes on both the winning and losing sides of the market. The formula used is:
+
+`Profit = (Your Stake / Total Stake on Winning Side) × Total Stake on Losing Side`
+
+Where:
+
+*   **Your Stake (S):** The amount of CELO you staked on the winning side.
+*   **Total Stake on Winning Side (W):** The sum of CELO staked by all voters on the winning side.
+*   **Total Stake on Losing Side (L):** The sum of CELO staked by all voters on the losing side.
+
+Your total payout if you win is your original stake plus the calculated profit (`Total Payout = Your Stake + Profit`).
+
+## Calculating Individual Losses
+
+If you voted on the losing side of a resolved bet, your entire staked amount (Your Stake) is considered a loss.
+
+## Example Calculation
+
+Let's illustrate with an example:
+
+*   Suppose you staked **4 CELO** on the winning side.
+*   The total amount staked by all voters on the winning side (W) was **12 CELO**.
+*   The total amount staked by all voters on the losing side (L) was **8 CELO**.
+
+Using the formula:
+
+`Profit = (4 CELO / 12 CELO) × 8 CELO`
+`Profit = (1/3) × 8 CELO`
+`Profit ≈ 2.67 CELO`
+
+Your total payout would be your initial stake plus the profit:
+
+`Total Payout = 4 CELO + 2.67 CELO ≈ 6.67 CELO`
+
+If you had staked on the losing side in this example, your loss would be your initial stake of 4 CELO.
+
+_Note: Earnings calculations displayed in the mini-app are based on resolved bets you participated in._ 

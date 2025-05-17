@@ -6,16 +6,16 @@ import { useMiniAppContext } from '../hooks/use-miniapp-context';
 import { useAssetPrice } from '../hooks/useAssetPrice';
 
 // Add contract address from app/page.tsx
-const BETCASTER_ADDRESS = process.env.NEXT_PUBLIC_BETCASTER_ADDRESS;
+const CELOCASTER_ADDRESS = process.env.NEXT_PUBLIC_CELOCASTER_ADDRESS;
 
 interface BetInfoProps {
   bet: Bet;
   darkMode: boolean;
-  betcasterAddress: `0x${string}`;
+  celocasterAddress: `0x${string}`;
   onVoteSuccess?: () => void;
 }
 
-export default function BetInfo({ bet, darkMode, betcasterAddress, onVoteSuccess }: BetInfoProps) {
+export default function BetInfo({ bet, darkMode, celocasterAddress, onVoteSuccess }: BetInfoProps) {
   const { actions } = useMiniAppContext();
 
   const isVerifiedBetWithPrice = (bet: Bet): boolean => {
@@ -42,7 +42,7 @@ export default function BetInfo({ bet, darkMode, betcasterAddress, onVoteSuccess
   // Share handler
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/share?bet=${bet.id}`;
-    const shareText = `🏆 Bet Prediction: ${bet.content}\nVote YAY or NAY on BetCaster!`;
+    const shareText = `🏆 Bet Prediction: ${bet.content}\nVote YAY or NAY on Celocaster!`;
     if (actions && actions.composeCast) {
       await actions.composeCast({
         text: shareText,

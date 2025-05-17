@@ -24,7 +24,7 @@ const db = admin.firestore();
 const PRIVATE_KEY = process.env.AUTOMATION_PRIVATE_KEY;
 const RPC_URL = process.env.AUTOMATION_RPC_URL;
 const CONTRACT_ADDRESS = process.env.AUTOMATION_CONTRACT_ADDRESS;
-const ABI_PATH = path.join(__dirname, "Betcaster.json");
+const ABI_PATH = path.join(__dirname, "Celocaster.json");
 const CONTRACT_ABI = JSON.parse(fs.readFileSync(ABI_PATH)).abi;
 
 const provider = new ethers.providers.JsonRpcProvider(RPC_URL);

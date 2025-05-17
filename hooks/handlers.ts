@@ -6,8 +6,8 @@ import toast from 'react-hot-toast';
 
 interface HandleCreateBetArgs {
   context: any;
-  betcasterAddress: `0x${string}`;
-  betcasterABI: Abi;
+  celocasterAddress: `0x${string}`;
+  celocasterABI: Abi;
   newBetContent: string;
   newBetCategory: string;
   newBetDuration: string;
@@ -28,8 +28,8 @@ interface HandleCreateBetArgs {
 // Handler for creating a bet (contract + Firestore)
 export async function handleCreateBet({
   context,
-  betcasterAddress,
-  betcasterABI,
+  celocasterAddress,
+  celocasterABI,
   newBetContent,
   newBetCategory,
   newBetDuration,
@@ -51,7 +51,7 @@ export async function handleCreateBet({
     return;
   }
   if (!newBetContent.trim()) return;
-  if (!betcasterAddress) {
+  if (!celocasterAddress) {
     toast.error('Contract address is not configured');
     return;
   }
@@ -68,8 +68,8 @@ export async function handleCreateBet({
     let gasLimit;
     try { gasLimit = BigInt(500000); } catch { gasLimit = undefined; }
     const params = {
-      address: betcasterAddress,
-      abi: betcasterABI,
+      address: celocasterAddress,
+      abi: celocasterABI,
       functionName: 'createBet',
       value: parseEther('3'),
       args: [

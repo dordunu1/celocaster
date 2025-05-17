@@ -12,33 +12,33 @@ async function verifyContracts() {
   const {
     btcUsdFeed,
     ethUsdFeed,
-    betcaster,
-    betcasterAutomation
+    celocaster,
+    celocasterAutomation
   } = deploymentInfo;
 
-  console.log("\nVerifying Betcaster contract...");
+  console.log("\nVerifying Celocaster contract...");
   try {
     await run("verify:verify", {
-      address: betcaster,
+      address: celocaster,
       constructorArguments: [
         ["BTC", "ETH"],
         [btcUsdFeed, ethUsdFeed]
       ],
     });
-    console.log("✅ Betcaster contract verified successfully");
+    console.log("✅ Celocaster contract verified successfully");
   } catch (error: any) {
-    console.error("❌ Failed to verify Betcaster:", error.message);
+    console.error("❌ Failed to verify Celocaster:", error.message);
   }
 
-  console.log("\nVerifying BetcasterAutomation contract...");
+  console.log("\nVerifying CelocasterAutomation contract...");
   try {
     await run("verify:verify", {
-      address: betcasterAutomation,
-      constructorArguments: [betcaster],
+      address: celocasterAutomation,
+      constructorArguments: [celocaster],
     });
-    console.log("✅ BetcasterAutomation contract verified successfully");
+    console.log("✅ CelocasterAutomation contract verified successfully");
   } catch (error: any) {
-    console.error("❌ Failed to verify BetcasterAutomation:", error.message);
+    console.error("❌ Failed to verify CelocasterAutomation:", error.message);
   }
 }
 

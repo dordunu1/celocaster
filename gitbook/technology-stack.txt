@@ -1,0 +1,11 @@
+# Technology Stack
+
+CeloCaster is built using a modern and robust technology stack designed for performance, scalability, and seamless integration with the Celo and Farcaster ecosystems:
+
+*   **Blockchain Platform:** Celo - The foundation of our decentralized application, chosen for its efficiency, low transaction costs, and mobile-first focus.
+*   **Smart Contract Language:** Solidity - Used for developing the core prediction market logic on the Celo blockchain.
+*   **Frontend Development:** React / Next.js - Provides a dynamic and responsive user interface for the web application and the Farcaster mini-app.
+*   **Farcaster Integration:** Farcaster Frame SDK - Enables native integration and interactive experiences directly within the Farcaster feed.
+*   **Decentralized Data Oracles:** Chainlink Price Feeds - Utilized for reliable and tamper-proof verification of outcomes in crypto price prediction markets.
+*   **Off-chain Data Management:** Firebase - Employed for efficient caching of public on-chain data and managing user-specific information that does not require on-chain storage, enhancing application responsiveness.
+*   **Smart Contract Development & Deployment:** Hardhat - Used as the development environment for compiling, testing, and deploying smart contracts to the Celo network. 
