@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useAssetPrice } from '../hooks/useAssetPrice';
 
 // Temporary flag to disable bet creation
-const IS_CREATION_DISABLED = true;
+const IS_CREATION_DISABLED = false;
 
 interface CategoryOption {
   id: number;

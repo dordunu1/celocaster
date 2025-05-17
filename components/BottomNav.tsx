@@ -16,8 +16,8 @@ interface BottomNavProps {
   isEthProviderAvailable: boolean;
   connectError: Error | null;
   switchError: Error | null;
-  activePage: 'feed' | 'activities';
-  onNavigate: (page: 'feed' | 'activities') => void;
+  activePage: 'feed' | 'activities' | 'leaderboard';
+  onNavigate: (page: 'feed' | 'activities' | 'leaderboard') => void;
 }
 
 export default function BottomNav({ 
@@ -88,13 +88,16 @@ export default function BottomNav({
           </button>
 
           {/* Leaderboard */}
-          <button 
-            className={`flex flex-col items-center p-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'} cursor-not-allowed`}
-            disabled={true}
+          <button
+            className={`flex flex-col items-center p-2 rounded transition-colors ${
+              activePage === 'leaderboard'
+                ? 'bg-yellow-500 text-white'
+                : darkMode ? 'text-gray-400 hover:text-yellow-500' : 'text-gray-600 hover:text-yellow-600'
+            }`}
+            onClick={() => onNavigate('leaderboard')}
           >
             <Activity className="h-6 w-6" />
             <span className="text-xs mt-1">Leaders</span>
-            <span className="text-[10px] opacity-75">Coming Soon</span>
           </button>
 
           {/* Wallet Connection */}

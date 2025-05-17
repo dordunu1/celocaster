@@ -38,6 +38,7 @@ import { useBets } from '../hooks/useBets';
 import { useComments } from '../hooks/useComments';
 import MyActivities from './MyActivities';
 import { motion } from 'framer-motion';
+import Leaderboard from './Leaderboard';
 
 // Add contract address from app/page.tsx
 const CELOCASTER_ADDRESS = process.env.NEXT_PUBLIC_CELOCASTER_ADDRESS as `0x${string}`;
@@ -151,11 +152,11 @@ export default function Celocaster({ celocasterAddress }: { celocasterAddress: `
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [isCreatingBet, setIsCreatingBet] = useState(false);
   const commentsUnsubscribeRef = useRef<(() => void) | null>(null);
-  const [activePage, setActivePage] = useState<'feed' | 'activities'>('feed');
+  const [activePage, setActivePage] = useState<'feed' | 'activities' | 'leaderboard'>('feed');
   const [showSkeleton, setShowSkeleton] = useState(true);
 
-  // Use the useCreateBet hook for bet creation
-  const createBet = useCreateBet(celocasterAddress);
+  // Use the useCreateBet hook for bet creation, passing the creator's address
+  const createBet = useCreateBet(celocasterAddress, address);
 
   // Rename the handlers to avoid conflicts
   const handleWalletConnect = () => {
@@ -309,7 +310,7 @@ export default function Celocaster({ celocasterAddress }: { celocasterAddress: `
         </div>
       </header>
 
-      {/* Main Content: Feed or MyActivities */}
+      {/* Main Content: Feed, MyActivities, or Leaderboard */}
       {activePage === 'feed' ? (
         <>
           <HotBetsRow darkMode={darkMode} />
@@ -577,9 +578,11 @@ export default function Celocaster({ celocasterAddress }: { celocasterAddress: `
             )}
           </main>
         </>
-      ) : (
+      ) : activePage === 'activities' ? (
         <MyActivities darkMode={darkMode} />
-      )}
+      ) : activePage === 'leaderboard' ? (
+        <Leaderboard darkMode={darkMode} />
+      ) : null}
 
       {/* Client-side only components */}
       {mounted && (

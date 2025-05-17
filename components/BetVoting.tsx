@@ -75,7 +75,13 @@ export default function BetVoting({ betId, voteStake, celocasterAddress, onVoteS
       if (isTransactionSuccess && lastVoteType) {
         try {
           // Update Firebase after blockchain transaction is confirmed
-          await betService.voteBet(betId, context?.user?.fid.toString() || '', lastVoteType);
+          await betService.voteBet(
+            betId, 
+            context?.user?.fid.toString() || '', 
+            lastVoteType,
+            context?.user?.username,
+            context?.user?.pfpUrl
+          );
           // Update only this bet instead of reloading all bets
           if (updateSingleBet) {
             await updateSingleBet(betId);

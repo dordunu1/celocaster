@@ -5,6 +5,7 @@ export type VoteType = 'yay' | 'nay';
 export interface Bet {
   id: string;
   author: string;
+  authorAddress?: `0x${string}`;
   content: string;
   category: Category;
   stakeAmount: number;

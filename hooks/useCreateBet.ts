@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 const celocasterABI = celocasterArtifact.abi;
 const MIN_VOTE_STAKE = 0.1; // 0.1 CELO
 
-export function useCreateBet(celocasterAddress: `0x${string}`) {
+export function useCreateBet(celocasterAddress: `0x${string}`, creatorAddress: `0x${string}` | undefined) {
   const { context } = useMiniAppContext();
   const [isCreatingBet, setIsCreatingBet] = useState(false);
   const [pendingBetId, setPendingBetId] = useState<string | null>(null);
@@ -106,7 +106,25 @@ export function useCreateBet(celocasterAddress: `0x${string}`) {
       return true;
     } catch (err) {
       setIsCreatingBet(false);
-      toast.error('Failed to create bet: ' + (err instanceof Error ? err.message : JSON.stringify(err)));
+      setPendingBetId(null); // Reset pendingBetId on error
+      setPendingTxHash(null); // Reset pendingTxHash on error
+
+      // Improved error handling
+      if (err instanceof Error) {
+        if (err.message.includes('user rejected') || err.message.includes('user denied') || (err as any).code === 4001) {
+          toast.error('Transaction rejected by user.');
+        } else if (err.message.includes('insufficient funds')) {
+           toast.error('Insufficient CELO balance for the stake.');
+        } else {
+          // For other errors, show a more general message
+          console.error('Bet creation failed:', err);
+          toast.error('Failed to create bet. Please try again.');
+        }
+      } else {
+        // Handle non-Error rejections
+        console.error('Bet creation failed:', err);
+        toast.error('Failed to create bet. Please try again.');
+      }
       return false;
     }
   };
@@ -116,6 +134,7 @@ export function useCreateBet(celocasterAddress: `0x${string}`) {
       const durationHours = parseFloat(newBetDuration);
       const baseBetData = {
         author: context?.user?.username || 'anonymous',
+        authorAddress: creatorAddress,
         category: newBetCategory,
         content: newBetContent.trim(),
         stakeAmount: 2,
