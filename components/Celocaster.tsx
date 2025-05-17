@@ -469,7 +469,7 @@ export default function Celocaster({ celocasterAddress }: { celocasterAddress: `
                           <BetVoting
                             betId={bet.id}
                             voteStake={bet.betAmount}
-                            betcasterAddress={celocasterAddress}
+                            celocasterAddress={celocasterAddress}
                             onVoteSuccess={loadBets}
                             updateSingleBet={updateSingleBet}
                             userVote={bet.userVote}
