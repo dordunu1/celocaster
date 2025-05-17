@@ -157,7 +157,7 @@ const CreateBetModal: React.FC<CreateBetModalProps> = ({
                 3 CELO (Fixed)
               </div>
               <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1 transition-colors duration-200`}>
-                Required platform stake to create a bet. This ensures quality predictions.
+                Required 3 CELO platform fee to create a bet. This fee is non-refundable and ensures quality predictions.
               </p>
             </div>
             {/* Vote Stake Amount Input */}
