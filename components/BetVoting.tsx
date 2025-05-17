@@ -30,7 +30,7 @@ const MIN_VOTE_STAKE = 0.1; // 0.1 CELO
 interface BetVotingProps {
   betId: string;
   voteStake: number; // This is the vote stake amount set by the bet creator
-  betcasterAddress: `0x${string}`;
+  celocasterAddress: `0x${string}`;
   onVoteSuccess?: () => void;
   userVote?: 'yay' | 'nay';
   yayCount?: number;
@@ -49,7 +49,7 @@ function getClaimAmount(voteStake: number, yayCount: number, nayCount: number, y
   return ((yayCount + nayCount) * voteStake) / totalWinners;
 }
 
-export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSuccess, userVote, yayCount = 0, nayCount = 0, isResolved = false, predictionType, disableVoting = false, updateSingleBet, darkMode }: BetVotingProps) {
+export default function BetVoting({ betId, voteStake, celocasterAddress, onVoteSuccess, userVote, yayCount = 0, nayCount = 0, isResolved = false, predictionType, disableVoting = false, updateSingleBet, darkMode }: BetVotingProps) {
   const [isVoting, setIsVoting] = useState(false);
   const [lastVoteType, setLastVoteType] = useState<'yay' | 'nay' | null>(null);
   const [currentTxHash, setCurrentTxHash] = useState<`0x${string}` | undefined>(undefined);
@@ -144,7 +144,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
 
       // Prepare transaction parameters with proper configuration
       const params = {
-        address: betcasterAddress,
+        address: celocasterAddress,
         abi: celocasterABI,
         functionName: 'castVote',
         args: [betId, isYay],
@@ -194,7 +194,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
       if (!isResolved) return;
       try {
         const provider = getFallbackProvider();
-        const contract = new ethers.Contract(betcasterAddress, celocasterABI, provider);
+        const contract = new ethers.Contract(celocasterAddress, celocasterABI, provider);
         const result = await contract.getBetInfo(betId);
         setYayWon(result.yayWon);
       } catch (e) {
@@ -202,7 +202,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
       }
     }
     fetchYayWon();
-  }, [isResolved, betId, betcasterAddress]);
+  }, [isResolved, betId, celocasterAddress]);
 
   // Check if user can claim
   const canClaim = isResolved && yayWon !== null && userVote && ((yayWon && userVote === 'yay') || (!yayWon && userVote === 'nay')) && !hasClaimed;
@@ -218,7 +218,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
       if (!address || !betId) return;
       try {
         const provider = getFallbackProvider();
-        const contract = new ethers.Contract(betcasterAddress, celocasterABI, provider);
+        const contract = new ethers.Contract(celocasterAddress, celocasterABI, provider);
         const [, , claimed] = await contract.getUserVoteInfo(betId, address);
         setHasClaimed(claimed);
       } catch (e) {
@@ -226,14 +226,14 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
       }
     }
     checkClaimed();
-  }, [address, betId, betcasterAddress]);
+  }, [address, betId, celocasterAddress]);
 
   // Claim handler
   const handleClaim = async () => {
     setIsClaiming(true);
     try {
       const txResponse = await writeContractAsync({
-        address: betcasterAddress,
+        address: celocasterAddress,
         abi: celocasterABI,
         functionName: 'claimPrize',
         args: [betId],
@@ -262,7 +262,7 @@ export default function BetVoting({ betId, voteStake, betcasterAddress, onVoteSu
 
       if (receipt) {
         const provider = getFallbackProvider();
-        const contract = new ethers.Contract(betcasterAddress, celocasterABI, provider);
+        const contract = new ethers.Contract(celocasterAddress, celocasterABI, provider);
         const [, , claimed] = await contract.getUserVoteInfo(betId, address);
         setHasClaimed(claimed);
         if (updateSingleBet) {
